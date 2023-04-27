@@ -33,25 +33,23 @@
 // 
 // float fof_vector[FOF_NUMARGS];
 
-
-void allocate_chunks(fof_queue* q, jfofs_status* status);
+void allocate_chunks(fof_queue* q, int* status);
   
 /* fof_queue_new():
  * Allocate a new queue. 
  * size must be power of 2
- * current chunk is the currently processed chunk, no write access is allowed in
- * this chunk.  
+ * current slot is the currently processed slot, no write access is allowed in
+ * this slot.  
  */
 
-fof_queue* fof_queue_new(double sample_rate, int slot_size, int n_slots,
-			 int n_free_chunks, int chunk_size, jfofs_status* status)
+fof_queue* fof_queue_new(int n_slots, int slot_size, int n_free_chunks,
+			 int chunk_size, int* status)
 {
   fof_queue* q;
-  int status;
   
-  status= posix_memalign((void**) &q, CACHE_LINE_SIZE,
-			 sizeof(fof_queue) + sizeof(chunk*) * size);
-		 
+  *status = posix_memalign((void**) &q, CACHE_LINE_SIZE,
+			 sizeof(fof_queue) + sizeof(chunk*) * n_slots);
+
   if (q == NULL)
   {
     *status = JFOFS_MEMORY;
@@ -89,11 +87,11 @@ void fof_queue_free(fof_queue* q)
   free(q);
 }
 
-chunk* chunk_allocate(fof_queue* q, jfofs_status* status)
+chunk* chunk_allocate(fof_queue* q, int* status)
 {
   chunk* ch;
 
-  &status = posix_memalign((void**) &ch, CACHE_LINE_SIZE,
+  *status = posix_memalign((void**) &ch, CACHE_LINE_SIZE,
 			  sizeof(chunk) + sizeof(fof) * q->chunk_size);
 
   if (ch == NULL)
@@ -115,7 +113,7 @@ void chunk_free(chunk* ch)
   free(ch);
 }
 
-void allocate_chunks(fof_queue* q, jfofs_status* status)
+void allocate_chunks(fof_queue* q, int* status)
 {
   printf("allocate_chunks ...");
   chunk* _chunk;
@@ -132,7 +130,7 @@ void allocate_chunks(fof_queue* q, jfofs_status* status)
   printf(" success!\n");
 }
 
-chunk* fof_queue_new_chunk(fof_queue* q, chunk** chunk_p, jfofs_status* status)
+chunk* fof_queue_new_chunk(fof_queue* q, chunk** chunk_p, int* status)
 {
   printf("fof_queue_new_chunk\n");
   chunk* _chunk;
@@ -162,7 +160,7 @@ void fof_queue_chunk_free(fof_queue* q, chunk* ch)
 }
 
 
-chunk* chunk_add_fof(fof_queue* q, chunk** chunk, fof* fof_in, jfofs_status* status)
+chunk* chunk_add_fof(fof_queue* q, chunk** chunk, fof* fof_in, int* status)
 {
   if (*chunk == 0 || (*chunk)->size == (*chunk)->max_size)
   {
@@ -175,9 +173,9 @@ chunk* chunk_add_fof(fof_queue* q, chunk** chunk, fof* fof_in, jfofs_status* sta
   return *chunk;
 }
 
-jfofs_status fof_queue_add(fof_queue* q, fof* fof_in)
+int fof_queue_add(fof_queue* q, fof* fof_in)
 {
-  jfofs_status status;
+  int status;
   
   printf("fof_queue_add\n");
 
@@ -186,9 +184,9 @@ jfofs_status fof_queue_add(fof_queue* q, fof* fof_in)
   int slot = ((int) rint(fof_in->time * q->sample_rate) - q->current_frame) /
              q->slot_size;
   printf("   slot: %d\n", slot);
-  if (slot < q->size)
+  if (slot < q->n_slots)
   {
-    slot = (q->head + slot) & (q->size - 1);
+    slot = (q->head + slot) & (q->n_slots - 1);
     chunk* chunk = q->slot[slot];
 
     if (chunk_add_fof(q, &(q->slot[slot]), fof_in, &status) == NULL)

@@ -16,7 +16,5 @@ enum jfofs_status_e
 
 typedef struct jfofs_controller_s jfofs_controller;
 typedef struct fof_s fof;
-//typedef struct sin_gen_s sin_gen;
-
 
 #endif /* __jfofs_types_h__ */

@@ -1,5 +1,5 @@
-#ifndef __jfofs_private_h__
-#define __jfofs_private_h__
+#ifndef __JFOFS_PRIVATE_H__
+#define __JFOFS_PRIVATE_H__
 
 #define CACHE_LINE_SIZE 64
 
