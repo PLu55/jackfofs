@@ -6,6 +6,8 @@
 
 #include "process_queue.h"
 
+void default_fof(float* a);
+
 void setUp(void) {
     // set stuff up here
 }
@@ -17,7 +19,7 @@ void tearDown(void) {
 void test_process_queue(void)
 {
   double sample_rate = 48000.0;
-  int q_size = 64;
+  int n_slots = 64;
   int slot_size = 128;
   int n_free_chunks = 10;
   int chunk_size = 10;
@@ -25,13 +27,13 @@ void test_process_queue(void)
   float _fof[FOF_NUMARGS];
   double time;
 
-  fof_queue* q = fof_queue_new(sample_rate, slot_size, q_size, n_free_chunks,
+  fof_queue* q = fof_queue_new(sample_rate, slot_size, n_slots, n_free_chunks,
 			        chunk_size, &status);
   TEST_ASSERT_NOT_NULL(q);
   TEST_ASSERT_EQUAL_INT(0, q->head);
   TEST_ASSERT_EQUAL_UINT64(0, q->current_frame);
   TEST_ASSERT_EQUAL_INT(slot_size, q->slot_size);
-  TEST_ASSERT_EQUAL_INT(q_size, q->size);
+  TEST_ASSERT_EQUAL_INT(n_slots, q->n_slots);
   TEST_ASSERT_TRUE(fabs(sample_rate - q->sample_rate) < 1e-9);
   TEST_ASSERT_NULL(q->excess);
     

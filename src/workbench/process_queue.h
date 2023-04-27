@@ -30,7 +30,7 @@ struct fof_queue_s
 {
   int head;               /* point to the slot to be processed next */
   uint64_t current_frame; /* time of the current slot in samples */  
-  int size;               /* number of slots in the queue */
+  int n_slots;            /* number of slots in the queue */
   int slot_size;          /* duration of a slot in number of samples */
   int chunk_size;         /* number of items each chunk can hold */
   double sample_rate;     /* sample rate */

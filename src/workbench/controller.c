@@ -9,8 +9,6 @@
 // jack_set_buffer_size_callback()
 // jack_set_sample_rate_callback()
 
-
-  
 fofs_jack_controller* fofs_jack_controller_new(int nclients, int nchans,
 					       jfofs_status* status)
 {

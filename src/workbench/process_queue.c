@@ -5,6 +5,7 @@
 #include <math.h>
 #include <fofs.h>
 
+#include "jfofs_private.h"
 #include "jfofs_types.h"
 #include "process_queue.h"
 
@@ -38,14 +39,19 @@ void allocate_chunks(fof_queue* q, jfofs_status* status);
 /* fof_queue_new():
  * Allocate a new queue. 
  * size must be power of 2
- * last chunk is for  
+ * current chunk is the currently processed chunk, no write access is allowed in
+ * this chunk.  
  */
 
-fof_queue* fof_queue_new(double sample_rate, int slot_size, int size,
+fof_queue* fof_queue_new(double sample_rate, int slot_size, int n_slots,
 			 int n_free_chunks, int chunk_size, jfofs_status* status)
 {
-  fof_queue* q = calloc(1, sizeof(fof_queue) + sizeof(chunk*) * size);
+  fof_queue* q;
+  int status;
   
+  status= posix_memalign((void**) &q, CACHE_LINE_SIZE,
+			 sizeof(fof_queue) + sizeof(chunk*) * size);
+		 
   if (q == NULL)
   {
     *status = JFOFS_MEMORY;
@@ -54,9 +60,9 @@ fof_queue* fof_queue_new(double sample_rate, int slot_size, int size,
   
   q->head = 0;
   q->current_frame = 0;
-  q->size = size;
+  q->n_slots = n_slots;
   q->slot_size = slot_size;
-  q-> chunk_size = chunk_size;
+  q->chunk_size = chunk_size;
   q->sample_rate = sample_rate;
   q->n_free_chunks = n_free_chunks;
   q->free_chunks = NULL;
@@ -83,11 +89,14 @@ void fof_queue_free(fof_queue* q)
   free(q);
 }
 
-chunk* chunk_new(fof_queue* q, jfofs_status* status)
+chunk* chunk_allocate(fof_queue* q, jfofs_status* status)
 {
-  chunk* ch = calloc(1, sizeof(chunk) + sizeof(fof) * q->chunk_size);
+  chunk* ch;
 
-  if (q == NULL)
+  &status = posix_memalign((void**) &ch, CACHE_LINE_SIZE,
+			  sizeof(chunk) + sizeof(fof) * q->chunk_size);
+
+  if (ch == NULL)
   {
     *status = JFOFS_MEMORY;
     return NULL;
@@ -113,7 +122,7 @@ void allocate_chunks(fof_queue* q, jfofs_status* status)
   
   for (int i = 0; i < q->n_free_chunks; i++)
   {
-    _chunk = chunk_new(q, status);
+    _chunk = chunk_allocate(q, status);
     if (_chunk == NULL)
       return;
     _chunk->next = q->free_chunks;
