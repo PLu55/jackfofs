@@ -33,7 +33,7 @@
 // 
 // float fof_vector[FOF_NUMARGS];
 
-void allocate_chunks(fof_queue* q, int* status);
+void allocate_chunks(fof_queue* q, int n_chunks, int* status);
   
 /* fof_queue_new():
  * Allocate a new queue. 
@@ -42,8 +42,8 @@ void allocate_chunks(fof_queue* q, int* status);
  * this slot.  
  */
 
-fof_queue* fof_queue_new(int n_slots, int slot_size, int n_free_chunks,
-			 int chunk_size, int* status)
+fof_queue* fof_queue_new(int sample_rate, int n_slots, int slot_size,
+			 int n_free_chunks, int chunk_size, int* status)
 {
   fof_queue* q;
   
@@ -57,7 +57,7 @@ fof_queue* fof_queue_new(int n_slots, int slot_size, int n_free_chunks,
   }
   
   q->head = 0;
-  q->current_frame = 0;
+  q->next_frame = 0;
   q->n_slots = n_slots;
   q->slot_size = slot_size;
   q->chunk_size = chunk_size;
@@ -67,7 +67,7 @@ fof_queue* fof_queue_new(int n_slots, int slot_size, int n_free_chunks,
   q->excess = NULL;
   q->slot = (chunk**)(&q->slot + 1);
   
-  allocate_chunks(q, status);
+  allocate_chunks(q, n_free_chunks, status);
   if (*status != JFOFS_SUCCESS)
     return NULL;
   
@@ -102,8 +102,8 @@ chunk* chunk_allocate(fof_queue* q, int* status)
   ch->next = NULL;
   ch->size = 0;
   ch->max_size = q->chunk_size;
-  ch->fof = (fof*)(&ch->fof + 1);
-  
+  ch->fof = (fof*)(ch + 1);
+
   *status = JFOFS_SUCCESS;
   return ch;
 }
@@ -113,12 +113,12 @@ void chunk_free(chunk* ch)
   free(ch);
 }
 
-void allocate_chunks(fof_queue* q, int* status)
+void allocate_chunks(fof_queue* q, int n_chunks, int* status)
 {
   printf("allocate_chunks ...");
   chunk* _chunk;
   
-  for (int i = 0; i < q->n_free_chunks; i++)
+  for (int i = 0; i < n_chunks; i++)
   {
     _chunk = chunk_allocate(q, status);
     if (_chunk == NULL)
@@ -137,7 +137,7 @@ chunk* fof_queue_new_chunk(fof_queue* q, chunk** chunk_p, int* status)
 
   if (q->free_chunks == NULL)
   {
-    allocate_chunks(q, status);
+    allocate_chunks(q, q->n_free_chunks, status);
     if (*status != JFOFS_SUCCESS)
       return NULL;
     q->n_free_chunks *= 2;
@@ -159,7 +159,6 @@ void fof_queue_chunk_free(fof_queue* q, chunk* ch)
   q->free_chunks = ch;
 }
 
-
 chunk* chunk_add_fof(fof_queue* q, chunk** chunk, fof* fof_in, int* status)
 {
   if (*chunk == 0 || (*chunk)->size == (*chunk)->max_size)
@@ -178,16 +177,13 @@ int fof_queue_add(fof_queue* q, fof* fof_in)
   int status;
   
   printf("fof_queue_add\n");
-
-  fof* _fof;
       
-  int slot = ((int) rint(fof_in->time * q->sample_rate) - q->current_frame) /
+  int slot = ((int) rint(fof_in->time * q->sample_rate) - q->next_frame) /
              q->slot_size;
   printf("   slot: %d\n", slot);
   if (slot < q->n_slots)
   {
     slot = (q->head + slot) & (q->n_slots - 1);
-    chunk* chunk = q->slot[slot];
 
     if (chunk_add_fof(q, &(q->slot[slot]), fof_in, &status) == NULL)
       return status;
@@ -209,3 +205,4 @@ chunk* fof_queue_remove_chunk_at_head(fof_queue* q, int cidx)
   return chunk;
 }
 
+// TODO: implement excess handling

@@ -1,8 +1,6 @@
 #ifndef __jfofs_types_h__
 #define __jfofs_types_h__
 
-#define JFOFS_MAX_CHANS 8
-
 typedef enum jfofs_status_e jfofs_status;
 
 enum jfofs_status_e
@@ -14,7 +12,7 @@ enum jfofs_status_e
   JFOFS_JACK_ERROR = 0x10000
 };
 
-typedef struct jfofs_controller_s jfofs_controller;
+typedef struct controller_s controller;
 typedef struct fof_s fof;
 
 #endif /* __jfofs_types_h__ */

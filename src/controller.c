@@ -4,6 +4,7 @@
 #include <fofs.h>
 
 #include "controller.h"
+#include "dsp.h"
 #include "fofs_jack_client.h"
 
 // jack_set_buffer_size_callback()
@@ -11,7 +12,7 @@
 
 int controller_process(jack_nframes_t nframes, void *arg)
 {
-  jfofs_controller* controller = (jfofs_controller*) arg;
+  controller* controller = (controller*) arg;
   fof_queue* q = controller->q;
   int slot_idx;
   chunk * chunk;
@@ -71,7 +72,8 @@ int controller_connect(jfofs_controller* ctrl)
 }
 
 jfofs_controller* jfofs_controller_new(FofsMode mode, int nclients,
-					       int nchans, int* status)
+				       int nchans, int n_fofs_per_client,
+				       int* status)
 {
 
   // nint nchans = fof_ModeToChannels(mode);
@@ -93,6 +95,7 @@ jfofs_controller* jfofs_controller_new(FofsMode mode, int nclients,
   ctrl->active = 0;
   ctrl->nclients = nclients;
   ctrl->nchans = nchans;
+  ctrl->n_fofs_per_client = n_fofs_per_client;
   ctrl->mode = mode;
 
   ctrl->j_client = jack_client_open(client_name, options, &status,

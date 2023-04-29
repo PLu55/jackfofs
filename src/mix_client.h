@@ -6,8 +6,6 @@
 #include "jfofs.h"
 #include "jfofs_types.h"
 
-typedef struct mix_client_s mix_client;
-
 struct mix_client_s
 {
   jfofs_controller *ctrl;
