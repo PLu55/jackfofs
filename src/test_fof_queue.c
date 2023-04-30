@@ -5,12 +5,12 @@
 #include "unity/unity.h"
 
 #include "jfofs_private.h"
-#include "process_queue.h"
+#include "fof_queue.h"
 #include "test_util.h"
 
 int fof_equal(fof* fof1, fof* fof2);
 
-void test_process_queue(void)
+void test_fof_queue(void)
 {
   int sample_rate = 48000;
   int n_slots = 64;
@@ -41,8 +41,8 @@ void test_process_queue(void)
   TEST_ASSERT_EQUAL_INT(0, JFOFS_SUCCESS);
   TEST_ASSERT_NOT_NULL(q->slot[0]);
   TEST_ASSERT_NULL(q->slot[0]->next);
-  TEST_ASSERT_EQUAL_INT(1, q->slot[0]->size);
-  TEST_ASSERT_EQUAL_INT(chunk_size, q->slot[0]->max_size);
+  TEST_ASSERT_EQUAL_INT(1, q->slot[0]->count);
+  TEST_ASSERT_EQUAL_INT(chunk_size, q->slot[0]->max_count);
   TEST_ASSERT_NOT_NULL(q->slot[0]->fof);
   // Should be TEST_ASSERT_EQUAL_DOUBLE but how to activate DOUBLE in Unity ?
   TEST_ASSERT_EQUAL_FLOAT(fof.time, q->slot[0]->fof[0].time);
@@ -55,7 +55,7 @@ void test_process_queue(void)
   status = fof_queue_add(q, &fof);
   
   TEST_ASSERT_NOT_NULL(q->slot[2]);
-  TEST_ASSERT_EQUAL_INT(1, q->slot[2]->size);
+  TEST_ASSERT_EQUAL_INT(1, q->slot[2]->count);
   TEST_ASSERT_FLOAT_WITHIN(1e-9f, 2.0f, q->slot[2]->fof[0].argv[FOF_ARG_freq]);
 
   fof.argv[FOF_ARG_freq] = 3.0f;
@@ -72,8 +72,8 @@ void test_process_queue(void)
   }
   TEST_ASSERT_TRUE(chunk != q->slot[2]);
   TEST_ASSERT_EQUAL_PTR(chunk, q->slot[2]->next);
-  TEST_ASSERT_EQUAL_INT(1, q->slot[2]->size);
-  TEST_ASSERT_EQUAL_INT(chunk_size, q->slot[2]->next->size);
+  TEST_ASSERT_EQUAL_INT(1, q->slot[2]->count);
+  TEST_ASSERT_EQUAL_INT(chunk_size, q->slot[2]->next->count);
 
   // Fof is added to the excess slot
   fof.time = (double) slot_size / sample_rate * (double) n_slots;
@@ -83,8 +83,18 @@ void test_process_queue(void)
 
   TEST_ASSERT_NOT_NULL(q->excess);
   TEST_ASSERT_NULL(q->excess->next);
-  TEST_ASSERT_EQUAL_INT(1, q->excess->size);
+  TEST_ASSERT_EQUAL_INT(1, q->excess->count);
 
+  // Advance time and add a fof, should end up in slot 1
+  q->next_frame = 48000;
+  
+  fof.time = (double) slot_size / sample_rate + 1.0;
+  
+  status = fof_queue_add(q, &fof);
+  chunk = q->slot[1];
+  TEST_ASSERT_NOT_NULL(chunk);
+  TEST_ASSERT_EQUAL_INT(1, chunk->count);
+  
   //q->slot[0]->next
   
   //  ~171 ms period

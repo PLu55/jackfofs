@@ -7,9 +7,9 @@
 
 #include "jfofs_private.h"
 #include "jfofs_types.h"
-#include "process_queue.h"
+#include "fof_queue.h"
 
-/* process_queue is an implementation of a circular queue to handle
+/* fof_queue is an implementation of a circular queue to handle
  * scheduling problems in audio processing.
  * 
  * The main data structure of the queue is an array where each cell
@@ -100,8 +100,8 @@ chunk* chunk_allocate(fof_queue* q, int* status)
     return NULL;
   }
   ch->next = NULL;
-  ch->size = 0;
-  ch->max_size = q->chunk_size;
+  ch->count = 0;
+  ch->max_count = q->chunk_size;
   ch->fof = (fof*)(ch + 1);
 
   *status = JFOFS_SUCCESS;
@@ -113,26 +113,42 @@ void chunk_free(chunk* ch)
   free(ch);
 }
 
+chunk* get_free_chunk(fof_queue* q)
+{
+  chunk* _chunk;
+
+  _chunk = q->free_chunks;
+  __atomic_thread_fence(__ATOMIC_ACQ_REL);
+  q->free_chunks->next = _chunk->next;
+  _chunk->next = NULL;
+  _chunk->count = NULL;
+  return _chunk;
+}
+
 void allocate_chunks(fof_queue* q, int n_chunks, int* status)
 {
-  printf("allocate_chunks ...");
   chunk* _chunk;
+  chunk* chunk_head = NULL;
+  chunk* chunk_tail = NULL;
   
   for (int i = 0; i < n_chunks; i++)
   {
     _chunk = chunk_allocate(q, status);
     if (_chunk == NULL)
       return;
-    _chunk->next = q->free_chunks;
-    q->free_chunks = _chunk;
+    if ( chunk_tail == NULL)
+      chunk_tail = _chunk;
+    _chunk->next = chunk_head;
+    chunk_head = _chunk;
   }
+  chunk_tail->next = q->free_chunks;
+  __atomic_thread_fence(__ATOMIC_ACQ_REL); 
+  q->free_chunks = chunk_head;
   *status = JFOFS_SUCCESS;
-  printf(" success!\n");
 }
 
 chunk* fof_queue_new_chunk(fof_queue* q, chunk** chunk_p, int* status)
 {
-  printf("fof_queue_new_chunk\n");
   chunk* _chunk;
 
   if (q->free_chunks == NULL)
@@ -142,10 +158,9 @@ chunk* fof_queue_new_chunk(fof_queue* q, chunk** chunk_p, int* status)
       return NULL;
     q->n_free_chunks *= 2;
   }
-
-  _chunk = q->free_chunks;
-  q->free_chunks = _chunk->next;
   
+  _chunk = get_free_chunk(q);
+  _chunk->count = 0;
   _chunk->next = *chunk_p;
   *chunk_p = _chunk;
  
@@ -161,13 +176,13 @@ void fof_queue_chunk_free(fof_queue* q, chunk* ch)
 
 chunk* chunk_add_fof(fof_queue* q, chunk** chunk, fof* fof_in, int* status)
 {
-  if (*chunk == 0 || (*chunk)->size == (*chunk)->max_size)
+  if (*chunk == 0 || (*chunk)->count == (*chunk)->max_count)
   {
       *chunk = fof_queue_new_chunk(q, chunk, status);
       if (*chunk == NULL)
 	return NULL;
   }
-  fof* fof_p = &(*chunk)->fof[(*chunk)->size++];
+  fof* fof_p = &(*chunk)->fof[(*chunk)->count++];
   memcpy(fof_p, fof_in, sizeof(fof));
   return *chunk;
 }
@@ -175,12 +190,14 @@ chunk* chunk_add_fof(fof_queue* q, chunk** chunk, fof* fof_in, int* status)
 int fof_queue_add(fof_queue* q, fof* fof_in)
 {
   int status;
+  int slot;
+  uint64_t n;
+  //printf("fof_queue_add\n");
+
+  n = __atomic_load_n(&q->next_frame, __ATOMIC_ACQUIRE);
   
-  printf("fof_queue_add\n");
-      
-  int slot = ((int) rint(fof_in->time * q->sample_rate) - q->next_frame) /
-             q->slot_size;
-  printf("   slot: %d\n", slot);
+  slot = ((int) rint(fof_in->time * q->sample_rate) - n) / q->slot_size;
+  //printf("   slot: %d\n", slot);
   if (slot < q->n_slots)
   {
     slot = (q->head + slot) & (q->n_slots - 1);

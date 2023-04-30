@@ -2,7 +2,7 @@
 #include <stdio.h> /* debug */
 
 #include "jfofs_private.h"
-#include "controller.h"
+#include "ctrl_client.h"
 #include "dsp_client.h"
 
 int dsp_client_process (jack_nframes_t nframes, void *arg);

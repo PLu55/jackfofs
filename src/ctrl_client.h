@@ -10,7 +10,7 @@
 #define MAX_DSP_CLIENTS 8
 
 
-struct controller_s
+struct ctrl_client_s
 {
   int active;
   int nclients;
@@ -25,7 +25,8 @@ struct controller_s
   FofBank* fof_bank;
 };
 
-controller* controller_new(FofMode mode, int nclients, int nchans, int *status);
-void controller_free(controller* ctrl);
+ctrl_client* ctrl_client_new(FofMode mode, int nclients, int n_fofs_per_client,
+			     int n_prealloc_fofs, int *status);
+void controller_free(ctrl_client* ctrl);
 
 #endif /* __jfofs_controller_h__ */

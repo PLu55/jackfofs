@@ -6,7 +6,7 @@
 #define CACHE_LINE_SIZE 64
 #define JFOFS_MAX_CHANS 8
 
-typedef struct controller_s controller;
+typedef struct ctrl_client_s ctrl_client;
 typedef struct dsp_client_s dsp_client;
 typedef struct mix_client_s mix_client;
 typedef struct fof_queue_s fof_queue;

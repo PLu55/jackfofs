@@ -10,8 +10,8 @@
 struct chunk_s
 {
   chunk* next;
-  int size;
-  int max_size;
+  int count;
+  int max_count;
   fof* fof;
   void* pad[5];
 };

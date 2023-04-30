@@ -12,7 +12,6 @@ enum jfofs_status_e
   JFOFS_JACK_ERROR = 0x10000
 };
 
-typedef struct controller_s controller;
 typedef struct fof_s fof;
 
 #endif /* __jfofs_types_h__ */

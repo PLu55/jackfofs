@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include "unity/unity.h"
+#include <fofs.h>
 
 #include "dsp_client.h"
 #include "signal_tester_client.h"

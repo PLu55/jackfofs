@@ -6,20 +6,23 @@ set(CMAKE_C_FLAGS "-g -Wall")
 set(FOFSHOME /home/plu/Projects/fofs)
 
 set(SRCS
-  process_queue.c
+  fof_queue.c
+  ctrl_client.c
   dsp_client.c)
 
 set(HDRS
   jfofs_types.h
   jfofs_private.h
-  process_queue.h
+  fof_queue.h
+  ctrl_client.h
   dsp_client.h)
 
 set(TEST_SRCS
   test_main.c
   test_util.c
   signal_tester_client.c
-  test_process_queue.c
+  test_fof_queue.c
+  test_ctrl_client.c
   test_dsp_client.c)
 
 set(TEST_HDRS
