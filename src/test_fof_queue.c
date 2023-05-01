@@ -10,6 +10,42 @@
 
 int fof_equal(fof* fof1, fof* fof2);
 
+void test_fof_queue_chunk_handling(void)
+{
+  int sample_rate = 48000;
+  int n_slots = 64;
+  int slot_size = 128;
+  int n_free_chunks = 10;
+  int chunk_size = 16;
+  int status;
+  fof fof;
+  fof_queue* q;
+  chunk* chk;
+  
+  TEST_ASSERT_EQUAL_UINT64(64, sizeof(chunk));
+  TEST_ASSERT_EQUAL_UINT64(64, sizeof(fof));
+    
+  q = fof_queue_new(sample_rate, n_slots, slot_size, n_free_chunks, chunk_size,
+		    &status);
+   TEST_ASSERT_NOT_NULL(q);
+
+   chk = q->free_chunks;
+   for (int i = 0; i < n_free_chunks; i++)
+   {
+     TEST_ASSERT_NOT_NULL(chk);
+     chk = chk->next;
+   }
+   TEST_ASSERT_NULL(chk);
+
+   chk = get_free_chunk(q);
+   TEST_ASSERT_NOT_EQUAL(q->free_chunks, chk);
+   TEST_ASSERT_NULL(chk->next);
+   
+   add_chunks_to_free_list(q, chk, chk);
+   TEST_ASSERT_EQUAL(q->free_chunks, chk);
+   TEST_ASSERT_NOT_NULL(chk->next);
+}
+
 void test_fof_queue(void)
 {
   int sample_rate = 48000;
@@ -21,8 +57,6 @@ void test_fof_queue(void)
   fof fof;
   fof_queue* q;
 
-  TEST_ASSERT_EQUAL_UINT64(64, sizeof(chunk));
-    
   q = fof_queue_new(sample_rate, n_slots, slot_size, n_free_chunks, chunk_size,
 		    &status);
   
@@ -35,22 +69,21 @@ void test_fof_queue(void)
   TEST_ASSERT_NULL(q->excess);
     
   fof_default(&fof);
-  fof.time = 0.0;
+  fof.time_us = 0;
   status = fof_queue_add(q, &fof); 
  
-  TEST_ASSERT_EQUAL_INT(0, JFOFS_SUCCESS);
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
   TEST_ASSERT_NOT_NULL(q->slot[0]);
   TEST_ASSERT_NULL(q->slot[0]->next);
   TEST_ASSERT_EQUAL_INT(1, q->slot[0]->count);
   TEST_ASSERT_EQUAL_INT(chunk_size, q->slot[0]->max_count);
   TEST_ASSERT_NOT_NULL(q->slot[0]->fof);
   // Should be TEST_ASSERT_EQUAL_DOUBLE but how to activate DOUBLE in Unity ?
-  TEST_ASSERT_EQUAL_FLOAT(fof.time, q->slot[0]->fof[0].time);
+  TEST_ASSERT_EQUAL_INT64(fof.time_us, q->slot[0]->fof[0].time_us);
   TEST_ASSERT_EQUAL_FLOAT(100.0f, q->slot[0]->fof[0].argv[FOF_ARG_freq]);
   TEST_ASSERT_TRUE(fof_equal(&fof, &q->slot[0]->fof[0]));
 
-  fof.time = (double) slot_size / sample_rate * 2.5;
-  printf("fof.time: %f\n", fof.time);
+  fof.time_us = (slot_size * 2500000) / sample_rate;
   fof.argv[FOF_ARG_freq] = 2.0f;
   status = fof_queue_add(q, &fof);
   
@@ -76,8 +109,8 @@ void test_fof_queue(void)
   TEST_ASSERT_EQUAL_INT(chunk_size, q->slot[2]->next->count);
 
   // Fof is added to the excess slot
-  fof.time = (double) slot_size / sample_rate * (double) n_slots;
-  printf("fof.time: %f\n", fof.time);
+  fof.time_us = (slot_size *  (n_slots + 1) * 1000000ULL) / sample_rate;
+  printf("nnn: %ld %f\n",fof.time_us, (double)fof.time_us* 1e-6); 
   fof.argv[FOF_ARG_freq] = 1000.0f;
   status = fof_queue_add(q, &fof);
 
@@ -88,7 +121,7 @@ void test_fof_queue(void)
   // Advance time and add a fof, should end up in slot 1
   q->next_frame = 48000;
   
-  fof.time = (double) slot_size / sample_rate + 1.0;
+  fof.time_us = (slot_size + 1) * 1000000ULL / sample_rate + 1000000ULL;
   
   status = fof_queue_add(q, &fof);
   chunk = q->slot[1];
@@ -114,5 +147,5 @@ int fof_equal(fof* fof1, fof* fof2)
   }
   
   return
-    r && fof1->time == fof2->time;
+    r && fof1->time_us == fof2->time_us;
 }

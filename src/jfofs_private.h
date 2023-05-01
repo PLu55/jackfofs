@@ -15,8 +15,9 @@ typedef struct fof_s fof;
 
 struct fof_s
 {
-  double time;
+  uint64_t time_us;         /* time in microsecunds */
   float argv[FOF_NUMARGS];
+  void* pad[1];
 };
 
 #endif /* __jfofs_types_h__ */

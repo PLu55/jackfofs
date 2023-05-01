@@ -26,7 +26,7 @@ void test_dsp_client(void)
   stc = signal_tester_client_new(&status);
   stc->m = (uint64_t)(48000.0 * 1.1);
   signal_tester_client_activate(stc);
-  fof.time = fof_time(dsp->fof_bank);
+  fof.time_us = fof_time(dsp->fof_bank);
   fof_default(&fof);
   dsp_client_add(dsp, &fof);
   dsp_client_activate(dsp);

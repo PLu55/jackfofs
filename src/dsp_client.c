@@ -82,7 +82,7 @@ void dsp_client_deactivate(dsp_client* dsp)
 
 void dsp_client_add(dsp_client* dsp, fof* fof)
 {
-  fof_add_v(dsp->fof_bank, fof->time, fof->argv);
+  fof_add_v(dsp->fof_bank, fof->time_us, fof->argv);
   
   /* TODO: how to count fofs? 
    * Implement a counter in fofs.c

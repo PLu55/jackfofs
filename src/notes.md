@@ -11,3 +11,16 @@ In the queue the fofs are stored in chunks, the chunks belonging to a
 slot are link together as a linked list.
 
 n_slot is the number of slots, it must be a power of two.
+
+## Testing
+
+### Unity
+
+https://www.throwtheswitch.org/unity/
+
+Cheat Sheet:
+https://github.com/ThrowTheSwitch/Unity/blob/master/docs/UnityAssertionsCheatSheetSuitableforPrintingandPossiblyFraming.pdf
+
+### Unity and CMake
+
+https://honeytreelabs.com/posts/cmake-unity-integration/
