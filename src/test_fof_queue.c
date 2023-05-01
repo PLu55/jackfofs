@@ -13,24 +13,28 @@ int fof_equal(fof* fof1, fof* fof2);
 void test_fof_queue_chunk_handling(void)
 {
   int sample_rate = 48000;
-  int n_slots = 64;
-  int slot_size = 128;
-  int n_free_chunks = 10;
-  int chunk_size = 16;
+  int buffer_size = 128;
   int status;
   fof fof;
   fof_queue* q;
   chunk* chk;
+  setup _setup;
+
+  _setup.mode = FOF_MONO;
+  _setup.n_clients = 1;
+  _setup.n_preallocate_fofs = 1024;
+  _setup.n_slots = 64;
+  _setup.n_free_chunks = 10;
+  _setup.chunk_size = 16;
   
   TEST_ASSERT_EQUAL_UINT64(64, sizeof(chunk));
   TEST_ASSERT_EQUAL_UINT64(64, sizeof(fof));
     
-  q = fof_queue_new(sample_rate, n_slots, slot_size, n_free_chunks, chunk_size,
-		    &status);
+  q = fof_queue_new(sample_rate, &_setup, buffer_size, &status);
    TEST_ASSERT_NOT_NULL(q);
 
    chk = q->free_chunks;
-   for (int i = 0; i < n_free_chunks; i++)
+   for (int i = 0; i < _setup.n_free_chunks; i++)
    {
      TEST_ASSERT_NOT_NULL(chk);
      chk = chk->next;
@@ -49,22 +53,26 @@ void test_fof_queue_chunk_handling(void)
 void test_fof_queue(void)
 {
   int sample_rate = 48000;
-  int n_slots = 64;
-  int slot_size = 128;
-  int n_free_chunks = 10;
-  int chunk_size = 10;
+  int buffer_size = 128;
   int status;
   fof fof;
   fof_queue* q;
+  setup _setup;
 
-  q = fof_queue_new(sample_rate, n_slots, slot_size, n_free_chunks, chunk_size,
-		    &status);
+  _setup.mode = FOF_MONO;
+  _setup.n_clients = 1;
+  _setup.n_preallocate_fofs = 1024;
+  _setup.n_slots = 64;
+  _setup.n_free_chunks = 10;
+  _setup.chunk_size = 10;
+  
+  q = fof_queue_new(sample_rate, &_setup, buffer_size, &status);
   
   TEST_ASSERT_NOT_NULL(q);
   TEST_ASSERT_EQUAL_INT(0, q->head);
   TEST_ASSERT_EQUAL_UINT64(0, q->next_frame);
-  TEST_ASSERT_EQUAL_INT(slot_size, q->slot_size);
-  TEST_ASSERT_EQUAL_INT(n_slots, q->n_slots);
+  TEST_ASSERT_EQUAL_INT(buffer_size, q->slot_size);
+  TEST_ASSERT_EQUAL_INT(_setup.n_slots, q->n_slots);
   TEST_ASSERT_TRUE(fabs(sample_rate - q->sample_rate) < 1e-9);
   TEST_ASSERT_NULL(q->excess);
     
@@ -76,14 +84,14 @@ void test_fof_queue(void)
   TEST_ASSERT_NOT_NULL(q->slot[0]);
   TEST_ASSERT_NULL(q->slot[0]->next);
   TEST_ASSERT_EQUAL_INT(1, q->slot[0]->count);
-  TEST_ASSERT_EQUAL_INT(chunk_size, q->slot[0]->max_count);
+  TEST_ASSERT_EQUAL_INT(_setup.chunk_size, q->slot[0]->max_count);
   TEST_ASSERT_NOT_NULL(q->slot[0]->fof);
   // Should be TEST_ASSERT_EQUAL_DOUBLE but how to activate DOUBLE in Unity ?
   TEST_ASSERT_EQUAL_INT64(fof.time_us, q->slot[0]->fof[0].time_us);
   TEST_ASSERT_EQUAL_FLOAT(100.0f, q->slot[0]->fof[0].argv[FOF_ARG_freq]);
   TEST_ASSERT_TRUE(fof_equal(&fof, &q->slot[0]->fof[0]));
 
-  fof.time_us = (slot_size * 2500000) / sample_rate;
+  fof.time_us = (buffer_size * 2500000) / sample_rate;
   fof.argv[FOF_ARG_freq] = 2.0f;
   status = fof_queue_add(q, &fof);
   
@@ -98,7 +106,7 @@ void test_fof_queue(void)
 
   // Overflow a chunk to force a new chunk to be added. 
   chunk* chunk = q->slot[2];
-  for (int i = 2; i < chunk_size + 1; i++)
+  for (int i = 2; i < _setup.chunk_size + 1; i++)
   {
     fof.argv[FOF_ARG_freq] = (float) (2 + i);
     status = fof_queue_add(q, &fof);
@@ -106,10 +114,11 @@ void test_fof_queue(void)
   TEST_ASSERT_TRUE(chunk != q->slot[2]);
   TEST_ASSERT_EQUAL_PTR(chunk, q->slot[2]->next);
   TEST_ASSERT_EQUAL_INT(1, q->slot[2]->count);
-  TEST_ASSERT_EQUAL_INT(chunk_size, q->slot[2]->next->count);
+  TEST_ASSERT_EQUAL_INT(_setup.chunk_size, q->slot[2]->next->count);
 
   // Fof is added to the excess slot
-  fof.time_us = (slot_size *  (n_slots + 1) * 1000000ULL) / sample_rate;
+  fof.time_us = (buffer_size *  (_setup.n_slots + 1) * 1000000ULL)
+    / sample_rate;
   printf("nnn: %ld %f\n",fof.time_us, (double)fof.time_us* 1e-6); 
   fof.argv[FOF_ARG_freq] = 1000.0f;
   status = fof_queue_add(q, &fof);
@@ -121,7 +130,7 @@ void test_fof_queue(void)
   // Advance time and add a fof, should end up in slot 1
   q->next_frame = 48000;
   
-  fof.time_us = (slot_size + 1) * 1000000ULL / sample_rate + 1000000ULL;
+  fof.time_us = (buffer_size + 1) * 1000000ULL / sample_rate + 1000000ULL;
   
   status = fof_queue_add(q, &fof);
   chunk = q->slot[1];

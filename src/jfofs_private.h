@@ -12,6 +12,7 @@ typedef struct mix_client_s mix_client;
 typedef struct fof_queue_s fof_queue;
 typedef struct chunk_s chunk;
 typedef struct fof_s fof;
+typedef struct setup_s setup;
 
 struct fof_s
 {
@@ -20,4 +21,15 @@ struct fof_s
   void* pad[1];
 };
 
-#endif /* __jfofs_types_h__ */
+
+struct setup_s
+{
+  FofMode mode;              /* type of fof, defines the number of channels */
+  int n_clients;             /* number of parallel dsp clients */  
+  int n_preallocate_fofs;    /* number of pre allocated fofs in each client */
+  int n_slots;               /* number of slots in circular fof buffer */
+  int n_free_chunks;         /* number of fof chunks to allocate */
+  int chunk_size ;           /* number of fofs per chunk */
+};
+
+#endif

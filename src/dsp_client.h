@@ -20,7 +20,7 @@ struct dsp_client_s
   jack_port_t* out_port[JFOFS_MAX_CHANS];
 };
 
-dsp_client* dsp_client_new(FofMode mode, int n_fofs_per_client, int* status);
+dsp_client* dsp_client_new(setup* _setup, int* status);
 void dsp_client_add(dsp_client* dsp, fof* fof);
 void dsp_client_activate(dsp_client* dsp);
 void dsp_client_deactivate(dsp_client* dsp);

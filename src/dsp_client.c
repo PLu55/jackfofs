@@ -7,7 +7,7 @@
 
 int dsp_client_process (jack_nframes_t nframes, void *arg);
 
-dsp_client* dsp_client_new(FofMode mode, int n_fofs_per_client, int* status)
+dsp_client* dsp_client_new(setup* _setup, int* status)
 {
   dsp_client* dsp;
   const char *client_name = "jfofs_dsp";
@@ -15,7 +15,7 @@ dsp_client* dsp_client_new(FofMode mode, int n_fofs_per_client, int* status)
   jack_options_t options = JackNullOption;
   jack_status_t jstatus;
   jack_nframes_t sample_rate;
-  jack_nframes_t buf_size;
+  jack_nframes_t buffer_size;
 
   *status = posix_memalign((void**) &dsp, CACHE_LINE_SIZE, sizeof(dsp_client));
   if (dsp == NULL)
@@ -24,7 +24,7 @@ dsp_client* dsp_client_new(FofMode mode, int n_fofs_per_client, int* status)
   }
 
   dsp->n_fofs = 0;
-  dsp->n_chans = fof_ModeToChannels(mode);
+  dsp->n_chans = fof_ModeToChannels(_setup->mode);
   dsp->j_client = jack_client_open(client_name, options, &jstatus, server_name);
   
   if (dsp->j_client == NULL)
@@ -36,9 +36,10 @@ dsp_client* dsp_client_new(FofMode mode, int n_fofs_per_client, int* status)
   jack_set_process_callback(dsp->j_client , dsp_client_process, (void*) dsp);
 
   sample_rate = jack_get_sample_rate(dsp->j_client);
-  buf_size = jack_get_buffer_size(dsp->j_client);
+  buffer_size = jack_get_buffer_size(dsp->j_client);
     
-  dsp->fof_bank = fof_newBank(sample_rate, mode, n_fofs_per_client, (int) buf_size);
+  dsp->fof_bank = fof_newBank(sample_rate, _setup->mode,
+			      _setup->n_preallocate_fofs, (int) buffer_size);
   if (dsp->fof_bank == NULL)
   {
     free(dsp);

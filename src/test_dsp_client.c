@@ -9,14 +9,20 @@
 
 void test_dsp_client(void)
 {
-  FofMode mode = FOF_MONO;
-  int n_fofs_per_client = 1024;
   dsp_client* dsp;
   signal_tester_client* stc;
   int status;
   fof fof;
+  setup _setup;
+
+  _setup.mode = FOF_MONO;
+  _setup.n_clients = 1;
+  _setup.n_preallocate_fofs = 1024;
+  _setup.n_slots = 0;
+  _setup.n_free_chunks = 0;
+  _setup.chunk_size = 0;
   
-  dsp = dsp_client_new(mode, n_fofs_per_client, &status);
+  dsp = dsp_client_new(&_setup, &status);
   TEST_ASSERT_NOT_NULL(dsp);
   TEST_ASSERT_NOT_NULL(dsp->j_client);
   TEST_ASSERT_EQUAL_INT(1, dsp->n_chans);

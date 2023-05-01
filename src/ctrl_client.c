@@ -15,23 +15,16 @@ int ctrl_client_connect(ctrl_client* ctrl);
 void ctrl_client_activate(ctrl_client* ctrl);
 void ctrl_client_deactivate(ctrl_client* ctrl);
 
-ctrl_client* ctrl_client_new(FofMode mode, int nclients, int n_fofs_per_client,
-			     int n_prealloc_fofs, int* status)
+ctrl_client* ctrl_client_new(setup* _setup, int* status)
 {
   ctrl_client* ctrl;
   const char *client_name = "jfofs_controller";
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
-
   jack_nframes_t sample_rate;
-  jack_nframes_t buf_size;
+  jack_nframes_t buffer_size;
   jack_status_t jstatus;
 
-  /* queue setup */
-  int n_slots = 64;
-  int slot_size = 64;
-  int n_free_chunks = 128;
-  int chunk_size = 256;
   
   *status = posix_memalign((void**) &ctrl, CACHE_LINE_SIZE,
 			   sizeof(ctrl_client));
@@ -40,32 +33,24 @@ ctrl_client* ctrl_client_new(FofMode mode, int nclients, int n_fofs_per_client,
     return NULL;
   }
   ctrl->active = 0;
-  ctrl->nclients = nclients;
-  ctrl->nchans = fof_ModeToChannels(mode);
-  ctrl->n_fofs_per_client = n_fofs_per_client;
-  ctrl->mode = mode;
+  ctrl->n_clients = _setup->n_clients;
 
-  ctrl->j_client = jack_client_open(client_name, options, &jstatus,
-					  server_name);
+  ctrl->mode = _setup->mode;
+
+  ctrl->j_client = jack_client_open(client_name, options, &jstatus, server_name);
   if (ctrl->j_client == NULL)
   {
     return NULL;
   }
   
   sample_rate = jack_get_sample_rate(ctrl->j_client);
-  buf_size = jack_get_buffer_size(ctrl->j_client);
-
-  ctrl->fof_bank = fof_newBank(sample_rate, mode, n_prealloc_fofs, buf_size);
-
-  ctrl->q = fof_queue_new(sample_rate, n_slots, slot_size, n_free_chunks,
-			  chunk_size, status);
-
+  buffer_size = jack_get_buffer_size(ctrl->j_client);
+  ctrl->q = fof_queue_new(sample_rate, _setup, buffer_size, status);
   jack_set_process_callback (ctrl->j_client, ctrl_client_process, (void*) ctrl);
-	
   ctrl->port = jack_port_register(ctrl->j_client, "out",
 				  JACK_DEFAULT_AUDIO_TYPE,
 				  JackPortIsOutput, 0);
-  jack_activate(ctrl->j_client);
+
 #if 0
   for (int i = 0; i < ctrl->nclients; i++)
   {
@@ -94,7 +79,7 @@ void ctrl_client_free(ctrl_client* ctrl)
 {
   /* TODO: protect */
   ctrl->active = 0;
-  for (int i = 0; i < ctrl->nclients; i++)
+  for (int i = 0; i < ctrl->n_clients; i++)
   {
     dsp_client_deactivate(ctrl->dsp[i]);
   }
@@ -131,7 +116,7 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
       dsp = ctrl->dsp[i];
       dsp_client_add(dsp, &(chk->fof[j]));
       i++;
-      i &= (ctrl->nclients - 1);
+      i &= (ctrl->n_clients - 1);
     }
     chk = chk->next;
   }
@@ -150,7 +135,7 @@ int ctrl_client_connect(ctrl_client* ctrl)
 {
   int status = 0;
 
-  for (int i = 0; i < ctrl->nclients; i++)
+  for (int i = 0; i < ctrl->n_clients; i++)
   {
     status = jack_connect(ctrl->j_client,
 			  jack_port_name(ctrl->port),

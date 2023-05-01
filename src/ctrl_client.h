@@ -13,9 +13,7 @@
 struct ctrl_client_s
 {
   int active;
-  int nclients;
-  int nchans;
-  int n_fofs_per_client;
+  int n_clients;
   FofMode mode;
   jack_client_t* j_client;
   dsp_client* dsp[MAX_DSP_CLIENTS];
@@ -25,8 +23,9 @@ struct ctrl_client_s
   FofBank* fof_bank;
 };
 
-ctrl_client* ctrl_client_new(FofMode mode, int nclients, int n_fofs_per_client,
-			     int n_prealloc_fofs, int *status);
+ctrl_client* ctrl_client_new(setup* _setup, int* status);
+void ctrl_client_activate(ctrl_client* ctrl);
+void ctrl_client_deactivate(ctrl_client* ctrl);
 void controller_free(ctrl_client* ctrl);
 
-#endif /* __jfofs_controller_h__ */
+#endif

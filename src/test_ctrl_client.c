@@ -12,28 +12,31 @@
 void test_ctrl_client(void)
 {
   ctrl_client* ctrl;
-  FofMode mode = FOF_MONO;
-  int nclients = 1;
-  int n_fofs_per_client = 16;
-  int n_preallocate_fofs = 1024;
+
   int status;
   jack_nframes_t n ,m;
   fof _fof;
   jack_nframes_t sample_rate;
-  jack_nframes_t buf_size;
   jack_time_t t0;
+  setup _setup;
 
+  _setup.mode = FOF_MONO;
+  _setup.n_clients = 1;
+  _setup.n_preallocate_fofs = 1024;
+  _setup.n_slots = 64;
+  _setup.n_free_chunks = 128;
+  _setup.chunk_size = 256;
 
-  ctrl = ctrl_client_new(mode, nclients, n_fofs_per_client, n_preallocate_fofs,
-			 &status);
+  ctrl = ctrl_client_new(&_setup, &status);
+
   t0 = jack_frame_time(ctrl->j_client);
   sample_rate = jack_get_sample_rate(ctrl->j_client);
-  buf_size = jack_get_buffer_size(ctrl->j_client);
 
   TEST_ASSERT_NOT_NULL(ctrl);
   TEST_ASSERT_NOT_NULL(ctrl->q);
 
   // Run empty for 2 sec.
+  ctrl_client_activate(ctrl);
   TEST_ASSERT_EQUAL_UINT64(0, ctrl->q->next_frame);
   n = jack_frame_time(ctrl->j_client);
   sleep(2);

@@ -32,8 +32,7 @@ struct fof_queue_s
   chunk** slot;           /* array holding the slots */
 };
 
-fof_queue* fof_queue_new(int sample_rate, int n_slots, int slot_size,
-			 int n_free_chunks, int chunk_size, int* status);
+fof_queue* fof_queue_new(int sample_rate, setup *_setup, int buffer_size, int* status);
 chunk* chunk_new(fof_queue* q, int* status);
 void chunk_free(chunk* ch);
 chunk* fof_queue_new_chunk(fof_queue* q, chunk** chunk_p, int* status);

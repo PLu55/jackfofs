@@ -43,13 +43,12 @@ int allocate_chunks(fof_queue* q, int n_chunks);
  * this slot.  
  */
 
-fof_queue* fof_queue_new(int sample_rate, int n_slots, int slot_size,
-			 int n_free_chunks, int chunk_size, int* status)
+fof_queue* fof_queue_new(int sample_rate, setup *_setup, int buffer_size, int* status)
 {
   fof_queue* q;
   
   *status = posix_memalign((void**) &q, CACHE_LINE_SIZE,
-			 sizeof(fof_queue) + sizeof(chunk*) * n_slots);
+			 sizeof(fof_queue) + sizeof(chunk*) * _setup->n_slots);
 
   if (q == NULL)
   {
@@ -59,16 +58,16 @@ fof_queue* fof_queue_new(int sample_rate, int n_slots, int slot_size,
   
   q->head = 0;
   q->next_frame = 0;
-  q->n_slots = n_slots;
-  q->slot_size = slot_size;
-  q->chunk_size = chunk_size;
+  q->n_slots = _setup->n_slots;
+  q->slot_size = buffer_size;
+  q->chunk_size = _setup->chunk_size;
   q->sample_rate = sample_rate;
-  q->n_free_chunks = n_free_chunks;
+  q->n_free_chunks = _setup->n_free_chunks;
   q->free_chunks = NULL;
   q->excess = NULL;
   q->slot = (chunk**)(&q->slot + 1);
   
-  *status = allocate_chunks(q, n_free_chunks);
+  *status = allocate_chunks(q, _setup->n_free_chunks);
   if (*status != JFOFS_SUCCESS)
     return NULL;
   
