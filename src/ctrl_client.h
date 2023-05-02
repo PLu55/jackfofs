@@ -7,9 +7,6 @@
 #include "jfofs_types.h"
 #include "jfofs_private.h"
 
-#define MAX_DSP_CLIENTS 8
-
-
 struct ctrl_client_s
 {
   int active;
@@ -24,8 +21,8 @@ struct ctrl_client_s
 };
 
 ctrl_client* ctrl_client_new(setup* _setup, int* status);
-void ctrl_client_activate(ctrl_client* ctrl);
-void ctrl_client_deactivate(ctrl_client* ctrl);
+int ctrl_client_activate(ctrl_client* ctrl);
+int ctrl_client_deactivate(ctrl_client* ctrl);
 void controller_free(ctrl_client* ctrl);
 
 #endif

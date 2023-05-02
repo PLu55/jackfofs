@@ -4,7 +4,8 @@
 #include <fofs.h>
 
 #define CACHE_LINE_SIZE 64
-#define JFOFS_MAX_CHANS 8
+#define MAX_CHANNELS 8
+#define MAX_DSP_CLIENTS 8
 
 typedef struct ctrl_client_s ctrl_client;
 typedef struct dsp_client_s dsp_client;
@@ -20,7 +21,6 @@ struct fof_s
   float argv[FOF_NUMARGS];
   void* pad[1];
 };
-
 
 struct setup_s
 {

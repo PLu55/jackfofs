@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h> /* debug */
+#include <jack/jack.h>
 
 #include "jfofs_private.h"
 #include "ctrl_client.h"
@@ -71,14 +72,14 @@ dsp_client* dsp_client_new(setup* _setup, int* status)
   return dsp;
 }
 
-void dsp_client_activate(dsp_client* dsp)
+int dsp_client_activate(dsp_client* dsp)
 {
-  jack_activate(dsp->j_client);
+  return jack_activate(dsp->j_client);
 }
 
-void dsp_client_deactivate(dsp_client* dsp)
+int dsp_client_deactivate(dsp_client* dsp)
 {
-  jack_deactivate(dsp->j_client);
+  return jack_deactivate(dsp->j_client);
 }
 
 void dsp_client_add(dsp_client* dsp, fof* fof)
@@ -92,7 +93,7 @@ void dsp_client_add(dsp_client* dsp, fof* fof)
 
 int dsp_client_process (jack_nframes_t nframes, void *arg)
 {
-  jack_default_audio_sample_t *buf[JFOFS_MAX_CHANS];
+  jack_default_audio_sample_t *buf[MAX_CHANNELS];
   dsp_client* dsp = (dsp_client*) arg;
 
   for(int i = 0; i < dsp->n_chans; i++)

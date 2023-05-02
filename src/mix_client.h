@@ -8,10 +8,9 @@
 
 struct mix_client_s
 {
-  jfofs_controller *ctrl;
   jack_client_t* j_client;
-  jack_port_t* in_port[JFOFS_MAX_CHANS];
-  jack_port_t* out_port[JFOFS_MAX_CHANS];
-}
+  jack_port_t* in_port[MAX_CHANNELS];
+  jack_port_t* out_port[MAX_CHANNELS];
+};
 
 #endif

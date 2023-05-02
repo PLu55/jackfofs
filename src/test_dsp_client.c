@@ -1,6 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
-#include "unity/unity.h"
+#include <unity/unity.h>
 #include <fofs.h>
 
 #include "dsp_client.h"
@@ -43,8 +43,11 @@ void test_dsp_client(void)
   jack_disconnect(dsp->j_client, "jfofs_dsp:out_1", "signal_tester:in");
   dsp_client_deactivate(dsp);
   signal_tester_client_deactivate(stc);
+  
   printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
   TEST_ASSERT_FLOAT_WITHIN(0.1f, -1.0f, stc->min);
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 1.0f, stc->max);
   TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.195585f, signal_tester_client_rms(stc));
+
+  
 }

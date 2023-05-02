@@ -1,6 +1,8 @@
 #ifndef __SIGNAL_TESTER_H__
 #define __SIGNAL_TESTER_H__
 
+#include <jack/jack.h>
+
 typedef struct signal_tester_client_s signal_tester_client;
 
 struct signal_tester_client_s

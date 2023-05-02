@@ -7,13 +7,8 @@
 #include "ctrl_client.h"
 #include "dsp_client.h"
 
-// jack_set_buffer_size_callback()
-// jack_set_sample_rate_callback()
-
 int ctrl_client_process(jack_nframes_t nframes, void *arg);
 int ctrl_client_connect(ctrl_client* ctrl);
-void ctrl_client_activate(ctrl_client* ctrl);
-void ctrl_client_deactivate(ctrl_client* ctrl);
 
 ctrl_client* ctrl_client_new(setup* _setup, int* status)
 {
@@ -50,29 +45,17 @@ ctrl_client* ctrl_client_new(setup* _setup, int* status)
   ctrl->port = jack_port_register(ctrl->j_client, "out",
 				  JACK_DEFAULT_AUDIO_TYPE,
 				  JackPortIsOutput, 0);
-
-#if 0
-  for (int i = 0; i < ctrl->nclients; i++)
-  {
-    dsp_client_activate(ctrl->dsp[i]);
-  }
-  //jack_activate(ctrl->mix->j_client);
-  jack_activate(ctrl->j_client);
-  ctrl_client_connect(ctrl);
-  /* TODO: protect */
-  ctrl->active = 1;
-#endif
   return ctrl;
 }
 
-void ctrl_client_activate(ctrl_client* ctrl)
+int ctrl_client_activate(ctrl_client* ctrl)
 {
-  jack_activate(ctrl->j_client);
+  return jack_activate(ctrl->j_client);
 }
 
-void ctrl_client_deactivate(ctrl_client* ctrl)
+int ctrl_client_deactivate(ctrl_client* ctrl)
 {
-  jack_deactivate(ctrl->j_client);
+  return jack_deactivate(ctrl->j_client);
 }
 
 void ctrl_client_free(ctrl_client* ctrl)
@@ -131,33 +114,4 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
   return 0;      
 }
 
-int ctrl_client_connect(ctrl_client* ctrl)
-{
-  int status = 0;
-
-  for (int i = 0; i < ctrl->n_clients; i++)
-  {
-    status = jack_connect(ctrl->j_client,
-			  jack_port_name(ctrl->port),
-			  jack_port_name(ctrl->dsp[i]->in_port));
-    if (status)
-      return status;
-    
-  }
-  #if 0
-  for (int i = 0; i < ctrl->nclients; i++)
-  {
-    dsp_client* dsp = ctrl->dsp[i];
-    for (int j = 0; j < ctrl->nchans; j++)
-    {
-      *status = jack_connect(dsp->j_client,
-			     jack_port_name(dsp->out_port[j]),
-			     jack_port_name(mix->in_port[j]));
-      if (status)
-	return status;
-    }
-  }
-  #endif
-  return status;
-}
 
