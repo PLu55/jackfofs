@@ -17,11 +17,6 @@ manager* manager_new(int *status)
 {
   manager* mgr;
 
-  //jack_nframes_t n ,m;
-  //fof _fof;
-  //jack_nframes_t sample_rate;
-  //jack_nframes_t buffer_size;
-
   *status = posix_memalign((void**) &mgr, CACHE_LINE_SIZE, sizeof(manager));
 
   if (mgr == NULL)
@@ -37,16 +32,29 @@ manager* manager_new(int *status)
   mgr->setup.chunk_size = 256;
   
   mgr->ctrl = ctrl_client_new(&mgr->setup, status);
+  mgr->q = mgr->ctrl->q;
   
-  //sample_rate = jack_get_sample_rate(mgr->ctrl->j_client);
-  //buffer_size = jack_get_buffer_size(mgr->ctrl->j_client);
-
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     mgr->dsp[i] = dsp_client_new(&mgr->setup, status);
   }
-
   return mgr;
+}
+
+void manager_add(manager* mgr, fof* _fof)
+{
+  fof_queue_add(mgr->q, _fof);
+}
+
+void manager_free(manager* mgr)
+{
+  ctrl_client_free(mgr->ctrl);
+  for (int i = 0; i < mgr->setup.n_clients; i++)
+  {
+    dsp_client_free(mgr->dsp[i]);
+  }
+  //mix_client_free(mgr->mix);
+  free(mgr);
 }
 
 inline jfofs_time systime()

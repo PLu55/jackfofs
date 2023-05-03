@@ -77,13 +77,24 @@ fof_queue* fof_queue_new(int sample_rate, setup *_setup, int buffer_size, int* s
 
 void fof_queue_free(fof_queue* q)
 {
-  while(q->free_chunks != NULL)
+  chunk* next;
+  chunk* ch = q->free_chunks;
+  
+  while(ch != NULL)
   {
-    chunk* ch = q->free_chunks;
-    q->free_chunks = ch->next;  
-    chunk_free(ch);
+    next = ch->next;
+    free(ch);
+    ch = next;
   }
-  // TODO: free all chunks!!!
+  for (int i = 0; i < q->n_slots; i++)
+  {
+    while (ch != NULL)
+    {
+      next = next->next;
+      free(ch);
+      ch = next;
+    }
+  }    
   free(q);
 }
 
@@ -107,14 +118,6 @@ chunk* chunk_allocate(int chunk_size, int* status)
   *status = JFOFS_SUCCESS;
   return ch;
 }
-
-void chunk_free(chunk* ch)
-{
-  free(ch);
-}
-
-
-
 int allocate_chunks(fof_queue* q, int n_chunks)
 {
   chunk* _chunk;
@@ -186,10 +189,9 @@ int fof_queue_add(fof_queue* q, fof* fof_in)
   n = __atomic_load_n(&q->next_frame, __ATOMIC_ACQUIRE);
   m = (fof_in->time_us * q->sample_rate / 1000000ULL);
   slot = (m - n) / q->slot_size;
-  //printf("   fof_time: %ld sr: %ld n: %ld m: %lld\n", fof_in->time_us, q->sample_rate,  n,
+  //printf("   fof_time: %ld sr: %ld n: %ld m: %ld\n", fof_in->time_us, q->sample_rate,  n,
   //	 m);
   //printf("   slot: %d\n", slot);
-  
   if (slot < 0)
   {
     return JFOFS_FALIURE;

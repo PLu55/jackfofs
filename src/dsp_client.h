@@ -20,9 +20,15 @@ struct dsp_client_s
   jack_port_t* out_port[MAX_CHANNELS];
 };
 
+static inline int dsp_client_add(dsp_client* dsp, fof* fof)
+{
+  return fof_add_v(dsp->fof_bank, fof->time_us, fof->argv);
+}
+
 dsp_client* dsp_client_new(setup* _setup, int* status);
-void dsp_client_add(dsp_client* dsp, fof* fof);
+int dsp_client_add(dsp_client* dsp, fof* fof);
 int dsp_client_activate(dsp_client* dsp);
 int dsp_client_deactivate(dsp_client* dsp);
+void dsp_client_free(dsp_client* dsp);
 
 #endif

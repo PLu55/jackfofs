@@ -13,11 +13,15 @@ struct manager_s
   ctrl_client* ctrl;
   dsp_client* dsp[MAX_DSP_CLIENTS];
   mix_client* mix;
+  fof_queue* q;
   setup setup;
 };
 
 manager* manager_new(int *status);
+void manager_free(manager* mgr);
 int manager_activate_clients(manager* mgr);
 int manager_connect_clients(manager* mgr);
+void manager_add(manager* mgr, fof* _fof);
+
 
 #endif

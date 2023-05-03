@@ -82,15 +82,6 @@ int dsp_client_deactivate(dsp_client* dsp)
   return jack_deactivate(dsp->j_client);
 }
 
-void dsp_client_add(dsp_client* dsp, fof* fof)
-{
-  fof_add_v(dsp->fof_bank, fof->time_us, fof->argv);
-  
-  /* TODO: how to count fofs? 
-   * Implement a counter in fofs.c
-   */
-}
-
 int dsp_client_process (jack_nframes_t nframes, void *arg)
 {
   jack_default_audio_sample_t *buf[MAX_CHANNELS];
@@ -104,4 +95,11 @@ int dsp_client_process (jack_nframes_t nframes, void *arg)
   fof_next(dsp->fof_bank, nframes, buf);
 
   return 0;
+}
+
+void dsp_client_free(dsp_client* dsp)
+{
+  dsp_client_deactivate(dsp);
+  jack_client_close(dsp->j_client);
+  free(dsp);
 }

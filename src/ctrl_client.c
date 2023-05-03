@@ -8,7 +8,6 @@
 #include "dsp_client.h"
 
 int ctrl_client_process(jack_nframes_t nframes, void *arg);
-int ctrl_client_connect(ctrl_client* ctrl);
 
 ctrl_client* ctrl_client_new(setup* _setup, int* status)
 {
@@ -50,60 +49,65 @@ ctrl_client* ctrl_client_new(setup* _setup, int* status)
 
 int ctrl_client_activate(ctrl_client* ctrl)
 {
+  ctrl->active = 1;
   return jack_activate(ctrl->j_client);
 }
 
 int ctrl_client_deactivate(ctrl_client* ctrl)
 {
+  ctrl->active = 0;
   return jack_deactivate(ctrl->j_client);
 }
 
 void ctrl_client_free(ctrl_client* ctrl)
 {
-  /* TODO: protect */
-  ctrl->active = 0;
-  for (int i = 0; i < ctrl->n_clients; i++)
-  {
-    dsp_client_deactivate(ctrl->dsp[i]);
-  }
-  //jack_deactivate(ctrl->mix);
   jack_deactivate(ctrl->j_client);
+  jack_client_close(ctrl->j_client);
+  fof_queue_free(ctrl->q);
+  free(ctrl);
 }
 
 int ctrl_client_process(jack_nframes_t nframes, void *arg)
 {
   ctrl_client* ctrl = (ctrl_client*) arg;
   fof_queue* q = ctrl->q;
-  int slot_idx;
+  uint slot_idx;
   chunk* chunk0;
   chunk* chunk_last;
   chunk* chk;
   int i = 0;
   dsp_client* dsp;
   uint64_t n;
-  
+
+  if (ctrl->active == 0)
+    return 0;
+
   /* TODO: fix atomic access, what memorder to use? */
   n = __atomic_add_fetch(&q->next_frame, nframes, __ATOMIC_ACQ_REL);
-  slot_idx = (n - nframes) & q->slot_size;
+  slot_idx = ((n - nframes) / q->slot_size) & (q->n_slots - 1);
   chunk0 = chk = q->slot[slot_idx];
-
-  q->slot[slot_idx] = 0;
+  q->slot[slot_idx] = NULL; 
 
   /* TODO: check the implementation of fof */
+  i = 0;
   while (chk)
   {
     chunk_last = chk;
+
     for (int j = 0; j < chk->count; j++)
     {
       /* round robin */
       dsp = ctrl->dsp[i];
-      dsp_client_add(dsp, &(chk->fof[j]));
+      printf("dsp[%d] @ %p\n", i, dsp);
       i++;
-      i &= (ctrl->n_clients - 1);
+      i %= ctrl->n_clients;
+      ctrl->m = i;
+
+      dsp_client_add(dsp, &(chk->fof[j])); /* problem here */
     }
     chk = chk->next;
   }
-  
+
   /* TODO: add chunks to free_chunks list in q */
   if (chunk0 != NULL)
   {

@@ -24,3 +24,21 @@ mix_client* mix_client_new(int* status)
   
   return mc;
 }
+
+
+int mix_client_activate(mix_client* mix)
+{
+  return jack_activate(mix->j_client);
+}
+
+int mix_client_deactivate(mix_client* mix)
+{
+  return jack_deactivate(mix->j_client);
+}
+
+void mix_client_free(mix_client* mix)
+{
+  mix_client_deactivate(mix);
+  jack_client_close(mix->j_client);
+  free(mix);
+}

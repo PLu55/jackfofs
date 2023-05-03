@@ -48,6 +48,13 @@ signal_tester_client* signal_tester_client_new(int* status)
   return stc;
 }
 
+void signal_tester_client_free(signal_tester_client* stc)
+{
+  signal_tester_client_deactivate(stc);
+  jack_client_close(stc->j_client);
+  free(stc);
+}
+
 float signal_tester_client_rms(signal_tester_client* stc)
 {
   return sqrtf(stc->sum / stc->n);

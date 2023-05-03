@@ -17,6 +17,7 @@ struct signal_tester_client_s
 };
 
 signal_tester_client* signal_tester_client_new(int* status);
+void signal_tester_client_free(signal_tester_client* stc);
 float signal_tester_client_rms(signal_tester_client* stc);
 void signal_tester_client_activate(signal_tester_client* stc);
 void signal_tester_client_deactivate(signal_tester_client* stc);

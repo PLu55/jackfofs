@@ -20,6 +20,9 @@ void test_ctrl_client(void)
   jack_time_t t0;
   setup _setup;
 
+  printf("fofs version: %s\n", fof_version());
+  //fof_set_trace_level(10);
+
   _setup.mode = FOF_MONO;
   _setup.n_clients = 1;
   _setup.n_preallocate_fofs = 1024;
@@ -34,7 +37,7 @@ void test_ctrl_client(void)
 
   TEST_ASSERT_NOT_NULL(ctrl);
   TEST_ASSERT_NOT_NULL(ctrl->q);
-
+  
   // Run empty for 2 sec.
   ctrl_client_activate(ctrl);
   TEST_ASSERT_EQUAL_UINT64(0, ctrl->q->next_frame);
@@ -44,11 +47,11 @@ void test_ctrl_client(void)
   TEST_ASSERT_INT_WITHIN(128, 96000, m - n);
   TEST_ASSERT_INT_WITHIN(128, 96000, ctrl->q->next_frame);
 
-  // Add a fof 
+  // Add a fof
   n = (jack_frame_time(ctrl->j_client) - t0 + 64) * 1000000ULL / sample_rate;
-  
   fof_default(&_fof);
   _fof.time_us = n;
-  status = fof_queue_add(ctrl->q, &_fof); 
-  
+  status = fof_queue_add(ctrl->q, &_fof);
+  sleep(2);
+  ctrl_client_free(ctrl);
 }

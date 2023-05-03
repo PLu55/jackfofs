@@ -48,6 +48,8 @@ void test_fof_queue_chunk_handling(void)
    add_chunks_to_free_list(q, chk, chk);
    TEST_ASSERT_EQUAL(q->free_chunks, chk);
    TEST_ASSERT_NOT_NULL(chk->next);
+
+   fof_queue_free(q);
 }
 
 void test_fof_queue(void)
@@ -137,6 +139,7 @@ void test_fof_queue(void)
   TEST_ASSERT_NOT_NULL(chunk);
   TEST_ASSERT_EQUAL_INT(1, chunk->count);
   
+  fof_queue_free(q);
   //q->slot[0]->next
   
   //  ~171 ms period
