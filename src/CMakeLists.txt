@@ -9,7 +9,8 @@ set(SRCS
   manager.c
   fof_queue.c
   ctrl_client.c
-  dsp_client.c)
+  dsp_client.c
+  mix_client.c)
 
 set(HDRS
   jfofs_types.h
@@ -23,14 +24,17 @@ set(TEST_SRCS
   test_main.c
   test_util.c
   signal_tester_client.c
+  sin_gen.c
   test_fof_queue.c
   test_ctrl_client.c
   test_dsp_client.c
-  test_manager.c)
+  test_manager.c
+  test_mix_client.c)
 
 set(TEST_HDRS
   test_util.h
-  signal_tester_client.h)
+  signal_tester_client.h
+  sin_gen.h)
 
 #add_subdirectory(tests)
 

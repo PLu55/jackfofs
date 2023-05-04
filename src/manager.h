@@ -15,6 +15,7 @@ struct manager_s
   mix_client* mix;
   fof_queue* q;
   setup setup;
+  void* pad[2];
 };
 
 manager* manager_new(int *status);

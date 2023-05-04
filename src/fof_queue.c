@@ -66,6 +66,9 @@ fof_queue* fof_queue_new(int sample_rate, setup *_setup, int buffer_size, int* s
   q->free_chunks = NULL;
   q->excess = NULL;
   q->slot = (chunk**)(&q->slot + 1);
+
+  for (int i = 0; i < q->n_slots; i++)
+    q->slot[i] = NULL;
   
   *status = allocate_chunks(q, _setup->n_free_chunks);
   if (*status != JFOFS_SUCCESS)
@@ -75,26 +78,28 @@ fof_queue* fof_queue_new(int sample_rate, setup *_setup, int buffer_size, int* s
   return q;
 }
 
-void fof_queue_free(fof_queue* q)
+void free_chunk_list(chunk* ch)
 {
   chunk* next;
-  chunk* ch = q->free_chunks;
-  
+
   while(ch != NULL)
   {
     next = ch->next;
     free(ch);
     ch = next;
   }
+}
+
+void fof_queue_free(fof_queue* q)
+{
+  free_chunk_list(q->free_chunks);
+  free_chunk_list(q->excess);
+
   for (int i = 0; i < q->n_slots; i++)
   {
-    while (ch != NULL)
-    {
-      next = next->next;
-      free(ch);
-      ch = next;
-    }
-  }    
+    free_chunk_list(q->slot[i]);
+  }
+  
   free(q);
 }
 

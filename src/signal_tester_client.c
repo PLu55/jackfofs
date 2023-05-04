@@ -16,17 +16,16 @@ signal_tester_client* signal_tester_client_new(int* status)
   jack_options_t options = JackNullOption;
   jack_status_t jstatus;
     
-  *status = posix_memalign((void**) &stc, CACHE_LINE_SIZE, sizeof(signal_tester_client));
+  *status = posix_memalign((void**) &stc, CACHE_LINE_SIZE,
+			   sizeof(signal_tester_client));
   if (stc == NULL)
   {
     return NULL;
   }
+  signal_tester_client_reset(stc);
 
-  stc->n = 0;
-  stc->sum = 0.0f;
-  stc->min = FLT_MAX;
-  stc->max = FLT_MIN;
-  stc->j_client = jack_client_open(client_name, options, &jstatus, server_name);
+  stc->j_client = jack_client_open(client_name, options, &jstatus,
+				   server_name);
 
   if (stc->j_client == NULL)
   {
@@ -48,10 +47,21 @@ signal_tester_client* signal_tester_client_new(int* status)
   return stc;
 }
 
+void signal_tester_client_reset(signal_tester_client* stc)
+{
+  stc->n = 0;
+  stc->sum = 0.0f;
+  stc->min = FLT_MAX;
+  stc->max = FLT_MIN;
+}
+
 void signal_tester_client_free(signal_tester_client* stc)
 {
-  signal_tester_client_deactivate(stc);
-  jack_client_close(stc->j_client);
+  if (stc->j_client != NULL)
+  {
+    jack_deactivate(stc->j_client);
+    jack_client_close(stc->j_client);
+  }
   free(stc);
 }
 

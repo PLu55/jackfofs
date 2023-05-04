@@ -3,7 +3,7 @@
 
 #include <fofs.h>
 
-#define CACHE_LINE_SIZE 64
+#define CACHE_LINE_SIZE 64UL
 #define MAX_CHANNELS 8
 #define MAX_DSP_CLIENTS 8
 

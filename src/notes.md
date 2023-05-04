@@ -24,3 +24,8 @@ https://github.com/ThrowTheSwitch/Unity/blob/master/docs/UnityAssertionsCheatShe
 ### Unity and CMake
 
 https://honeytreelabs.com/posts/cmake-unity-integration/
+
+### Valgrind
+
+`valgrind --leak-check=yes --track-origins=yes ./jfofstest`
+

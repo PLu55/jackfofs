@@ -13,13 +13,12 @@ struct ctrl_client_s
   int n_clients;
   FofMode mode;
   jack_client_t* j_client;
-  dsp_client* dsp[MAX_DSP_CLIENTS];
-  mix_client* mix;
   jack_port_t* port;
   fof_queue* q;
-  FofBank* fof_bank;
   int n;
   int m;
+  void* pad[2];
+  dsp_client* dsp[MAX_DSP_CLIENTS];
 };
 
 ctrl_client* ctrl_client_new(setup* _setup, int* status);

@@ -18,6 +18,7 @@ struct dsp_client_s
   jack_client_t* j_client;
   jack_port_t* in_port;
   jack_port_t* out_port[MAX_CHANNELS];
+  void* pad[3];
 };
 
 static inline int dsp_client_add(dsp_client* dsp, fof* fof)

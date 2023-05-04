@@ -21,7 +21,7 @@ char* fof_arg_name[] = { "ampl", "freq","gliss", "phi", "beta",
 
 void print_fof(fof* f)
 {
-  printf("fof@%p:\n", f);
+  printf("fof @%p:\n", f);
   printf("     time: %8ld\n", f->time_us);
   for (int i = 0; i < FOF_NUMARGS; i++)
     printf("   %6s: %8.4f\n", fof_arg_name[i], f->argv[i]);

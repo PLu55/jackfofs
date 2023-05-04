@@ -36,7 +36,9 @@ manager* manager_new(int *status)
   
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    mgr->dsp[i] = dsp_client_new(&mgr->setup, status);
+    dsp_client* dsp = dsp_client_new(&mgr->setup, status);
+    mgr->dsp[i] = dsp;
+    mgr->ctrl->dsp[i] = dsp;
   }
   return mgr;
 }

@@ -17,10 +17,12 @@ void test_manager(void)
   fof _fof;
   int status;
 
+  TEST_ASSERT_EQUAL_INT(0, sizeof(manager) % CACHE_LINE_SIZE);
   mgr = manager_new(&status);
   TEST_ASSERT_NOT_NULL(mgr);
   TEST_ASSERT_NOT_NULL(mgr->ctrl);
   TEST_ASSERT_NOT_NULL(mgr->dsp[0]);
+  TEST_ASSERT_NOT_NULL(mgr->ctrl->dsp[0]);
   //TEST_ASSERT_NOT_NULL(mgr->mix);
   TEST_ASSERT_EQUAL_INT(0, manager_activate_clients(mgr));
 
@@ -34,24 +36,23 @@ void test_manager(void)
   jack_connect(mgr->dsp[0]->j_client,
 	       jack_port_name(mgr->dsp[0]->out_port[0]),
 	       jack_port_name(stc->in_port));
-    
-    //"jfofs_dsp:out_1", "signal_tester:in");
 
   mgr->ctrl->n = 0;
   mgr->ctrl->m = 0;
   jack_time_t t0 =jack_frame_time(mgr->ctrl->j_client);
   uint64_t n =  jfofs_nframes_to_time_us(mgr->q->next_frame, mgr->q->sample_rate);
-  
+
   _fof.time_us = n + 100000;
   fof_default(&_fof);
   manager_add(mgr, &_fof);
-  printf("slot_18: %p cnt: %d\n", mgr->q->slot[18], mgr->q->slot[18]->count);
-  print_fof(&(mgr->q->slot[18]->fof[0]));
   
-  sleep(5);
-  printf("slot_18: %p\n", mgr->q->slot[18]);
-  printf("n: %d m: %d\n", mgr->ctrl->n, mgr->ctrl->m);
-  printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
+  sleep(2);
+
+  //printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
+
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, -1.0f, stc->min);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 1.0f, stc->max);
+  TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.195585f, signal_tester_client_rms(stc));
   signal_tester_client_free(stc);
   manager_free(mgr);
 }

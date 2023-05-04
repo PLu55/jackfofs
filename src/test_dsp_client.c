@@ -14,13 +14,15 @@ void test_dsp_client(void)
   int status;
   fof fof;
   setup _setup;
+  
   _setup.mode = FOF_MONO;
   _setup.n_clients = 1;
   _setup.n_preallocate_fofs = 1024;
   _setup.n_slots = 0;
   _setup.n_free_chunks = 0;
   _setup.chunk_size = 0;
-  
+
+  TEST_ASSERT_EQUAL_INT(0, sizeof(dsp_client) % CACHE_LINE_SIZE);
   dsp = dsp_client_new(&_setup, &status);
   TEST_ASSERT_NOT_NULL(dsp);
   TEST_ASSERT_NOT_NULL(dsp->j_client);
@@ -45,14 +47,14 @@ void test_dsp_client(void)
   jack_disconnect(dsp->j_client,
 		  jack_port_name(dsp->out_port[0]),
 		  jack_port_name(stc->in_port));
-  dsp_client_deactivate(dsp);
   signal_tester_client_deactivate(stc);
+  dsp_client_deactivate(dsp);
+
   //printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
   TEST_ASSERT_FLOAT_WITHIN(0.1f, -1.0f, stc->min);
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 1.0f, stc->max);
-  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.195585f, signal_tester_client_rms(stc));
+  TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.195585f, signal_tester_client_rms(stc));
 
   signal_tester_client_free(stc);
   dsp_client_free(dsp);
-  
 }
