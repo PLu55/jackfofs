@@ -1,14 +1,11 @@
 #ifndef __JFOFS_H__
 #define __JFOFS_H__
 
-static inline jack_nframes_t jfofs_time_us_to_nframe(uint64_t t, int sample_rate)
-{
-  return t * sample_rate / 1000000ULL;
-}
+typedef struct jfofs_s jfofs;
+typedef struct fof_s fof;
 
-static inline uint64_t jfofs_nframes_to_time_us(uint64_t n, int sample_rate)
-{
-  return n * 1000000ULL / sample_rate;
-}
-
+jfofs* jfofs_new();
+void jfofs_free(jfofs* _jfofs);
+void jfofs_add(jfofs* _jfofs, fof* _fof);
+  
 #endif

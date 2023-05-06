@@ -1,9 +1,12 @@
 cmake_minimum_required (VERSION 3.24)
 
-project (Jack_Fofs VERSION 0.0.1)
+project (Jack_Fofs VERSION 4.0.1)
 
 set(CMAKE_C_FLAGS "-g -Wall")
 set(FOFSHOME /home/plu/Projects/fofs)
+
+configure_file(config.h.in config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(SRCS
   manager.c
@@ -48,4 +51,9 @@ link_libraries(${FOFSHOME}/build/libfofs.so)
 add_executable(jfofstest)
 target_sources(jfofstest PRIVATE ${TEST_SRCS} ${TEST_HDRS} ${SRCS} ${HDRS})
 target_link_libraries(jfofstest libunity.a)
+
+add_executable(jfofs)
+target_sources(jfofs PRIVATE main.c ${SRCS} ${HDRS})
+
+
 

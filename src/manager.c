@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h> /* debug */
 #include <jack/jack.h>
 
@@ -13,7 +14,7 @@
 // jack_set_buffer_size_callback()
 // jack_set_sample_rate_callback()
 
-manager* manager_new(int *status)
+manager* manager_new(setup* _setup, int *status)
 {
   manager* mgr;
 
@@ -24,15 +25,10 @@ manager* manager_new(int *status)
     return NULL;
   }
 
-  mgr->setup.mode = FOF_MONO;
-  mgr->setup.n_clients = 1;
-  mgr->setup.n_preallocate_fofs = 1024;
-  mgr->setup.n_slots = 64;
-  mgr->setup.n_free_chunks = 128;
-  mgr->setup.chunk_size = 256;
-  
+  memcpy((char*) &(mgr->setup), (char*) _setup, sizeof(setup));
   mgr->ctrl = ctrl_client_new(&mgr->setup, status);
   mgr->q = mgr->ctrl->q;
+  mgr->mix = mix_client_new(fof_ModeToChannels(mgr->setup.mode), status);
   
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
@@ -40,12 +36,8 @@ manager* manager_new(int *status)
     mgr->dsp[i] = dsp;
     mgr->ctrl->dsp[i] = dsp;
   }
-  return mgr;
-}
 
-void manager_add(manager* mgr, fof* _fof)
-{
-  fof_queue_add(mgr->q, _fof);
+  return mgr;
 }
 
 void manager_free(manager* mgr)
@@ -102,6 +94,10 @@ void time_handling()
 int manager_activate_clients(manager* mgr)
 {
   int status;
+
+  status = mix_client_activate(mgr->mix);
+  if (status)
+      return status;
   
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
@@ -109,34 +105,54 @@ int manager_activate_clients(manager* mgr)
     if (status)
       return status;
   }
+
   return ctrl_client_activate(mgr->ctrl);
+}
+
+int manager_deactivate_clients(manager* mgr)
+{
+  int status;
+
+  status = ctrl_client_deactivate(mgr->ctrl);
+
+  if (status)
+      return status;
+  
+  for (int i = 0; i < mgr->setup.n_clients; i++)
+  {
+    status = dsp_client_deactivate(mgr->dsp[i]);
+    if (status)
+      return status;
+  }
+
+  return mix_client_deactivate(mgr->mix);
 }
 
 int manager_connect_clients(manager* mgr)
 {
+  int status;
+  
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    int status;
     status = jack_connect(mgr->ctrl->j_client,
 			  jack_port_name(mgr->ctrl->port),
 			  jack_port_name(mgr->dsp[i]->in_port));
     if (status)
       return status;
   }
-#if 0
+
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    dsp_client* dsp = mgr->ctrl->dsp[i];
-    for (int j = 0; j < mgr->ctrl->nchans; j++)
+    dsp_client* dsp = mgr->dsp[i];
+    for (int j = 0; j < dsp->n_chans; j++)
     {
-      *status = jack_connect(dsp->j_client,
-			     jack_port_name(dsp->out_port[j]),
-			     jack_port_name(mix->in_port[j]));
+      status = jack_connect(dsp->j_client,
+			    jack_port_name(dsp->out_port[j]),
+			    jack_port_name(mgr->mix->in_port[j]));
       if (status)
 	return status;
     }
   }
   
-#endif
   return JFOFS_SUCCESS;
 }

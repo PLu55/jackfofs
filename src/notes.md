@@ -29,3 +29,10 @@ https://honeytreelabs.com/posts/cmake-unity-integration/
 
 `valgrind --leak-check=yes --track-origins=yes ./jfofstest`
 
+### IPC
+
+https://www.tutorialspoint.com/inter_process_communication/index.htm
+
+https://opensource.com/sites/default/files/gated-content/inter-process_communication_in_linux.pdf
+
+https://biendltb.github.io/tech/inter-process-communication-ipc-in-cpp/

@@ -87,17 +87,15 @@ int stc_process (jack_nframes_t nframes, void *arg)
 
   buf = jack_port_get_buffer(stc->in_port, nframes);
 
-  if (stc->n < stc->m)
+  for (int i = 0; i < nframes && stc->n < stc->m; i++)
   {
-    for (int i = 0; i < nframes; i++)
-    {
-      float x = buf[i];
-      stc->sum += x * x;
-      stc->min = x < stc->min ? x : stc->min; 
-      stc->max = x > stc->max ? x : stc->max; 
-    }
-    stc->n += nframes;
+    float x = buf[i];
+    stc->sum += x * x;
+    stc->min = x < stc->min ? x : stc->min; 
+    stc->max = x > stc->max ? x : stc->max;
+    stc->n++;
   }
+
   return 0;
 }
 

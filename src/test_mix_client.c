@@ -33,9 +33,11 @@ void test_mix_client_with_nchans(int n_chans)
   double freq;
   double ampl;
   int status;
+  jack_nframes_t sample_rate;
   
   freq = 1000.0;
   ampl = 0.01;
+
   
   mix = mix_client_new(n_chans, &status);
   TEST_ASSERT_NOT_NULL(mix);
@@ -43,12 +45,14 @@ void test_mix_client_with_nchans(int n_chans)
   TEST_ASSERT_NOT_NULL(mix->in_port[0]);
   TEST_ASSERT_NOT_NULL(mix->out_port[0]);
 
+  sample_rate = jack_get_sample_rate(mix->j_client);
+
   sgen = sin_gen_new(freq, ampl, &status);
   TEST_ASSERT_NOT_NULL(sgen);
 
   stc = signal_tester_client_new(&status);
   TEST_ASSERT_NOT_NULL(stc);
-  stc->m = (uint64_t)(48000.0 * 1.1);
+  stc->m = (uint64_t)(sample_rate * 0.5);
 
   mix_client_activate(mix);
   sin_gen_activate(sgen);
@@ -56,7 +60,7 @@ void test_mix_client_with_nchans(int n_chans)
   
   connect_ports(mix, sgen, stc, n_chans);
   
-  sleep(2);
+  sleep(1);
   signal_tester_client_deactivate(stc);
   sin_gen_deactivate(sgen);
   mix_client_deactivate(mix);
@@ -65,29 +69,12 @@ void test_mix_client_with_nchans(int n_chans)
 	 signal_tester_client_rms(stc), stc->n);
   TEST_ASSERT_FLOAT_WITHIN(1e-6, ampl * n_chans , stc->max);
   TEST_ASSERT_FLOAT_WITHIN(1e-6, ampl * n_chans, -stc->min);
-  //TEST_ASSERT_FLOAT_WITHIN(1e-6, ampl * M_SQRT1_2 * n_chans ,
-  //			   signal_tester_client_rms(stc));
+  TEST_ASSERT_FLOAT_WITHIN(1e-4, ampl * M_SQRT1_2 * n_chans ,
+  			   signal_tester_client_rms(stc));
   signal_tester_client_free(stc);
   sin_gen_free(sgen);
   mix_client_free(mix);
 }
-
-#if 1
-
-int connect_ports(mix_client* mix, sin_gen* sgen, signal_tester_client* stc,
-		  int n_chans)
-{
-  int status = 0;
-  jack_connect(sgen->j_client,
-	       jack_port_name(sgen->out_port),
-	       jack_port_name(mix->in_port[0]));
-  jack_connect(mix->j_client,
-	       jack_port_name(mix->out_port[n_chans - 1]),
-	       jack_port_name(stc->in_port));
-  return status;
-}
-
-#else
 
 int connect_ports(mix_client* mix, sin_gen* sgen, signal_tester_client* stc,
 		  int n_chans)
@@ -99,12 +86,10 @@ int connect_ports(mix_client* mix, sin_gen* sgen, signal_tester_client* stc,
     status &= jack_connect(sgen->j_client,
 			  jack_port_name(sgen->out_port),
 			  jack_port_name(mix->in_port[i]));
-    printf("connect1 status: %d\n", status);
     status &= jack_connect(mix->j_client,
 		 jack_port_name(mix->out_port[i]),
 		 jack_port_name(stc->in_port));
-    printf("connect2 status: %d\n", status);
   }
   return status;
 }
-#endif
+

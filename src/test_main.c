@@ -23,7 +23,8 @@ int main (int argc, char *argv[])
   //RUN_TEST(test_fof_queue);
   //RUN_TEST(test_dsp_client);
   //RUN_TEST(test_ctrl_client);
-  //RUN_TEST(test_manager);
-  RUN_TEST(test_mix_client);
+  //RUN_TEST(test_mix_client);
+  RUN_TEST(test_manager);
+
   return UNITY_END();
 }

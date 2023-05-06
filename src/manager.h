@@ -2,6 +2,7 @@
 #define __MANAGER_H__
 
 #include "jfofs_private.h"
+#include "fof_queue.h"
 #include "ctrl_client.h"
 #include "dsp_client.h"
 #include "mix_client.h"
@@ -18,11 +19,17 @@ struct manager_s
   void* pad[2];
 };
 
-manager* manager_new(int *status);
+static inline void manager_add(manager* mgr, fof* _fof)
+{
+  fof_queue_add(mgr->q, _fof);
+}
+
+manager* manager_new(setup* _setup, int *status);
 void manager_free(manager* mgr);
 int manager_activate_clients(manager* mgr);
+int manager_deactivate_clients(manager* mgr);
 int manager_connect_clients(manager* mgr);
-void manager_add(manager* mgr, fof* _fof);
+//void manager_add(manager* mgr, fof* _fof);
 
 
 #endif
