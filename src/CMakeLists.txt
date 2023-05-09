@@ -8,6 +8,9 @@ set(FOFSHOME /home/plu/Projects/fofs)
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+set(LIB_SRCS
+  api.c)
+
 set(SRCS
   manager.c
   fof_queue.c
@@ -16,6 +19,7 @@ set(SRCS
   mix_client.c)
 
 set(HDRS
+  jfofs.h
   jfofs_types.h
   jfofs_private.h
   manager.h
@@ -32,11 +36,15 @@ set(TEST_SRCS
   test_ctrl_client.c
   test_dsp_client.c
   test_manager.c
-  test_mix_client.c)
+  test_mix_client.c
+  manager_dummy.c
+  api.c
+  test_api.c)
 
 set(TEST_HDRS
   test_util.h
   signal_tester_client.h
+  manager_dummy.h
   sin_gen.h)
 
 #add_subdirectory(tests)

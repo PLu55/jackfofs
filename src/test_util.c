@@ -1,3 +1,4 @@
+#include "jfofs_private.h"
 #include "test_util.h"
 
 void fof_default(fof* _fof)
@@ -19,11 +20,23 @@ void fof_default(fof* _fof)
 char* fof_arg_name[] = { "ampl", "freq","gliss", "phi", "beta",
   "alpha", "amin", "cutoff", "pan1", "pan2", "pan3" };
 
-void print_fof(fof* f)
+void fof_print(fof* f)
 {
   printf("fof @%p:\n", f);
   printf("     time: %8ld\n", f->time_us);
   for (int i = 0; i < FOF_NUMARGS; i++)
     printf("   %6s: %8.4f\n", fof_arg_name[i], f->argv[i]);
   printf("\n");
+}
+
+int fof_equal(fof* fof1, fof* fof2)
+{
+  int r = 1;
+  for (int i = 0; i < FOF_NUMARGS; i++)
+  {
+    r = r && fof1->argv[i] == fof2->argv[i];
+  }
+  
+  return
+    r && fof1->time_us == fof2->time_us;
 }

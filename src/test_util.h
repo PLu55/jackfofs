@@ -7,6 +7,7 @@
 #include "jfofs_private.h"
 
 void fof_default(fof* _fof);
-void print_fof(fof* f);
+void fof_print(fof* f);
+int fof_equal(fof* fof1, fof* fof2);
 
 #endif

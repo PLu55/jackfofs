@@ -16,7 +16,7 @@ struct manager_s
   mix_client* mix;
   fof_queue* q;
   setup setup;
-  void* pad[2];
+  shm_t* shm;
 };
 
 static inline void manager_add(manager* mgr, fof* _fof)
@@ -24,12 +24,14 @@ static inline void manager_add(manager* mgr, fof* _fof)
   fof_queue_add(mgr->q, _fof);
 }
 
+manager* manager_create(setup* _setup, int *status);
 manager* manager_new(setup* _setup, int *status);
 void manager_free(manager* mgr);
 int manager_activate_clients(manager* mgr);
 int manager_deactivate_clients(manager* mgr);
 int manager_connect_clients(manager* mgr);
 //void manager_add(manager* mgr, fof* _fof);
-
+int manager_setup_ipc(manager* mgr);
+void manager_ipc_loop(manager* mgr);
 
 #endif

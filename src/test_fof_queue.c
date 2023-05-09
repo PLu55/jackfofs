@@ -8,8 +8,6 @@
 #include "fof_queue.h"
 #include "test_util.h"
 
-int fof_equal(fof* fof1, fof* fof2);
-
 void test_fof_queue_chunk_handling(void)
 {
   int sample_rate = 48000;
@@ -150,14 +148,3 @@ void test_fof_queue(void)
      
 }
 
-int fof_equal(fof* fof1, fof* fof2)
-{
-  int r = 1;
-  for (int i = 0; i < FOF_NUMARGS; i++)
-  {
-    r = r && fof1->argv[i] == fof2->argv[i];
-  }
-  
-  return
-    r && fof1->time_us == fof2->time_us;
-}

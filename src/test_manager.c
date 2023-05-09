@@ -2,7 +2,7 @@
 #include <unity/unity.h>
 #include <fofs.h>
 #include <jack/jack.h>
-#include<unistd.h>
+#include <unistd.h>
 
 #include "signal_tester_client.h"
 #include "manager.h"

@@ -31,7 +31,7 @@ sin_gen* sin_gen_new(double freq, double amplitude, int* status)
   
   if (sgen->j_client == NULL)
   {
-    *status = JFOFS_JACK_ERROR | jstatus;
+    *status = JFOFS_JACK_ERROR_MASK | jstatus;
     return NULL;
   }
   

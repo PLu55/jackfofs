@@ -1,7 +1,12 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdio.h> /* debug */
 #include <jack/jack.h>
+#include <fcntl.h> /* Defines O_* constants */
+#include <sys/stat.h> /* Defines mode constants */
+#include <sys/mman.h>
+#include <semaphore.h>
 
 #include "manager.h"
 #include "fof_queue.h"
@@ -14,6 +19,45 @@
 // jack_set_buffer_size_callback()
 // jack_set_sample_rate_callback()
 
+manager* manager_create(setup* _setup, int *status)
+{
+  manager* mgr;
+  
+  mgr = manager_new(_setup, status);
+
+  if (mgr == NULL)
+  {
+    *status = JFOFS_MEMORY;
+    return NULL;
+  }
+
+  *status = manager_setup_ipc(mgr);
+
+  if (*status != 0)
+  {
+    manager_free(mgr);
+    return NULL;
+  }
+
+  *status = manager_activate_clients(mgr);
+
+  if (*status != 0)
+  {
+    manager_free(mgr);
+    return NULL;
+  }
+
+  *status = manager_connect_clients(mgr);
+  
+  if (*status != 0)
+  {
+    manager_free(mgr);
+    return NULL;
+  }
+  
+  return mgr;
+}
+
 manager* manager_new(setup* _setup, int *status)
 {
   manager* mgr;
@@ -25,6 +69,7 @@ manager* manager_new(setup* _setup, int *status)
     return NULL;
   }
 
+  memset((char*) mgr, 0, sizeof(manager));
   memcpy((char*) &(mgr->setup), (char*) _setup, sizeof(setup));
   mgr->ctrl = ctrl_client_new(&mgr->setup, status);
   mgr->q = mgr->ctrl->q;
@@ -42,12 +87,17 @@ manager* manager_new(setup* _setup, int *status)
 
 void manager_free(manager* mgr)
 {
-  ctrl_client_free(mgr->ctrl);
+  shm_unlink(SHM_NAME);
+  if (mgr->ctrl != NULL)
+    ctrl_client_free(mgr->ctrl);
+
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    dsp_client_free(mgr->dsp[i]);
+    if (mgr->dsp[i] != NULL) 
+      dsp_client_free(mgr->dsp[i]);
   }
-  //mix_client_free(mgr->mix);
+  if (mgr->mix != NULL)
+    mix_client_free(mgr->mix);
   free(mgr);
 }
 
@@ -155,4 +205,43 @@ int manager_connect_clients(manager* mgr)
   }
   
   return JFOFS_SUCCESS;
+}
+
+int manager_setup_ipc(manager* mgr)
+{
+  int fd;
+  int status;
+    
+  shm_unlink(SHM_NAME);
+  fd = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR|S_IWUSR);
+  if (fd < 0)
+    return JFOFS_SHM_ERROR;
+
+  ftruncate(fd, sizeof(shm_t));
+
+  mgr->shm = (shm_t*) mmap(NULL, sizeof(shm_t) , PROT_READ | PROT_WRITE,
+			   MAP_SHARED, fd, 0);
+
+  if (mgr->shm == 0)
+    return JFOFS_SHM_ERROR;
+    
+  status = sem_init(&mgr->shm->sem1, 1, 0);
+  status = sem_init(&mgr->shm->sem2, 1, 1);
+
+  if (status != 0)
+    return JFOFS_SHM_ERROR;
+
+  return JFOFS_SUCCESS;
+}
+
+void manager_ipc_loop(manager* mgr)
+{
+  shm_t* shm = mgr->shm;
+  
+  while(1)
+  {
+    sem_wait(&shm->sem1);
+    manager_add(mgr, &shm->fof);
+    sem_post(&shm->sem2);
+  }
 }

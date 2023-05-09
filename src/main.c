@@ -1,10 +1,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <argp.h>
-#include <fcntl.h> /* Defines O_* constants */
-#include <sys/stat.h> /* Defines mode constants */
-#include <sys/mman.h>
-#include <semaphore.h>
 #include <signal.h>
 
 #include "config.h"
@@ -91,7 +87,6 @@ parse_opt (int key, char *arg, struct argp_state *state)
 static struct argp argp = { options, parse_opt, 0, doc };
 
 static manager* mgr = NULL;
-static char* shm_name = SHM_NAME;
 
 static void exit_handler(int status)
 {
@@ -100,8 +95,7 @@ static void exit_handler(int status)
     manager_deactivate_clients(mgr);
     manager_free(mgr);
   }
-  shm_unlink(shm_name);
-  printf("jfofs: exit!\n");
+
   exit(status != 0);
 }
 
@@ -115,9 +109,6 @@ int main (int argc, char **argv)
   struct arguments arguments;
   setup _setup;
   int status;
-  int fd;
-  size_t shm_size = sizeof(shm_t);
-  shm_t* shm;
   struct sigaction new_action, old_action;
 
   mgr = NULL;
@@ -153,7 +144,7 @@ int main (int argc, char **argv)
   _setup.chunk_size = arguments.chunk_size;
   _setup.n_free_chunks = arguments.n_chunks;
 
-  mgr = manager_new(&_setup, &status);
+  mgr = manager_create(&_setup, &status);
   
   if (mgr == NULL)
   {
@@ -161,56 +152,8 @@ int main (int argc, char **argv)
     exit_handler(status);
   }
 
-  shm_unlink(shm_name);
-  fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR|S_IWUSR);
-  if (fd < 0)
-  {
-    printf("Couldn't allocate shared memory!\n");
-
-    exit_handler(1);
-  }
-
-  ftruncate(fd, shm_size);
-
-  shm = (shm_t*) mmap(NULL, shm_size , PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-  if (shm == 0)
-  {
-    printf("Jfofs: couldn't map shared memory!\n");
-    exit_handler(1);
-  }
+  manager_ipc_loop(mgr);
     
-  status = sem_init(&shm->sem, 1, 1);
-
-  if (status != 0)
-  {
-    printf("Jfofs: couldn't create semaphore!\n");
-    exit_handler(1);
-  }
-  
-  status = manager_activate_clients(mgr);
-
-  if (status != 0)
-  {
-    printf("Jfofs: couldn't activate jack clients!\n");
-    exit_handler(1);
-  }
-
-  status = manager_connect_clients(mgr);
-  
-  if (status != 0)
-  {
-    printf("Jfofs: Couldn't connect jack clients!\n");
-
-    exit_handler(1);
-  }
-
-  while(1)
-  {
-    sem_wait(&shm->sem);
-    manager_add(mgr, &shm->fof);
-    sem_post(&shm->sem);
-  }
   exit_handler(0);
   return 0;
 }

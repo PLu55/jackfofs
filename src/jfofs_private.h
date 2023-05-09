@@ -39,7 +39,8 @@ struct setup_s
 
 struct shm_s
 {
-  sem_t sem;
+  sem_t sem1;
+  sem_t sem2;
   fof fof;
 };
 

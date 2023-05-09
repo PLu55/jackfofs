@@ -1,6 +1,8 @@
 #ifndef __jfofs_types_h__
 #define __jfofs_types_h__
 
+#include <stdint.h>
+
 #define TIME_1 1000000ULL
 
 typedef uint64_t jfofs_time;
@@ -13,7 +15,8 @@ enum jfofs_status_e
   JFOFS_FALIURE = 0x01,
   JFOFS_MEMORY = 0x02,
   JFOFS_PORT_ERROR = 0x03, /* can't register jack port */
-  JFOFS_JACK_ERROR = 0x10000
+  JFOFS_SHM_ERROR = 0x04,
+  JFOFS_JACK_ERROR_MASK = 0x10000
 };
 
 
