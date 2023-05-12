@@ -12,15 +12,15 @@
 
 int sin_gen_process(jack_nframes_t nframes, void *arg);
 
-sin_gen* sin_gen_new(double freq, double amplitude, int* status)
+sin_gen_t* sin_gen_new(double freq, double amplitude, int* status)
 {
-  sin_gen* sgen;
+  sin_gen_t* sgen;
   const char *client_name = "sin_gen";
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
   jack_status_t jstatus;
 
-  *status = posix_memalign((void**) &sgen, CACHE_LINE_SIZE,  sizeof(sin_gen));
+  *status = posix_memalign((void**) &sgen, CACHE_LINE_SIZE,  sizeof(sin_gen_t));
 
   if (sgen == NULL)
   {
@@ -51,17 +51,17 @@ sin_gen* sin_gen_new(double freq, double amplitude, int* status)
   return sgen;
 }
 
-int sin_gen_activate(sin_gen* sgen)
+int sin_gen_activate(sin_gen_t* sgen)
 {
   return jack_activate(sgen->j_client);
 }
 
-int sin_gen_deactivate(sin_gen* sgen)
+int sin_gen_deactivate(sin_gen_t* sgen)
 {
   return jack_deactivate(sgen->j_client);
 }
 
-void sin_gen_free(sin_gen* sgen)
+void sin_gen_free(sin_gen_t* sgen)
 {
   jack_deactivate(sgen->j_client);
   jack_client_close(sgen->j_client);
@@ -70,7 +70,7 @@ void sin_gen_free(sin_gen* sgen)
 
 int sin_gen_process(jack_nframes_t nframes, void *arg)
 {
-  sin_gen* sgen = (sin_gen*) arg;
+  sin_gen_t* sgen = (sin_gen_t*) arg;
   jack_default_audio_sample_t *buf;
   jack_nframes_t nframes0 = jack_last_frame_time(sgen->j_client);
  

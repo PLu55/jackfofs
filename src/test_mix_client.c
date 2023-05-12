@@ -11,7 +11,7 @@
 
 void test_mix_client_with_nchans(int n_chans);
 
-int connect_ports(mix_client* mix, sin_gen* sgen, signal_tester_client* stc,
+int connect_ports(mix_client_t* mix, sin_gen* sgen, signal_tester_client* stc,
 		  int n_chans);
 
 void test_mix_client(void)
@@ -27,7 +27,7 @@ void test_mix_client(void)
 
 void test_mix_client_with_nchans(int n_chans)
 {
-  mix_client* mix;
+  mix_client_t* mix;
   sin_gen* sgen;
   signal_tester_client* stc;
   double freq;
@@ -76,7 +76,7 @@ void test_mix_client_with_nchans(int n_chans)
   mix_client_free(mix);
 }
 
-int connect_ports(mix_client* mix, sin_gen* sgen, signal_tester_client* stc,
+int connect_ports(mix_client_t* mix, sin_gen_t* sgen, signal_tester_client_* stc,
 		  int n_chans)
 {
   int status = 0;

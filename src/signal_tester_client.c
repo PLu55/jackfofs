@@ -8,16 +8,16 @@
 
 int stc_process (jack_nframes_t nframes, void *arg);
 
-signal_tester_client* signal_tester_client_new(int* status)
+signal_tester_client_t* signal_tester_client_new(int* status)
 {
-  signal_tester_client* stc;
+  signal_tester_client_t* stc;
   const char *client_name = "signal_tester";
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
   jack_status_t jstatus;
     
   *status = posix_memalign((void**) &stc, CACHE_LINE_SIZE,
-			   sizeof(signal_tester_client));
+			   sizeof(signal_tester_client_t));
   if (stc == NULL)
   {
     return NULL;
@@ -47,7 +47,7 @@ signal_tester_client* signal_tester_client_new(int* status)
   return stc;
 }
 
-void signal_tester_client_reset(signal_tester_client* stc)
+void signal_tester_client_reset(signal_tester_client_t* stc)
 {
   stc->n = 0;
   stc->sum = 0.0f;
@@ -55,7 +55,7 @@ void signal_tester_client_reset(signal_tester_client* stc)
   stc->max = FLT_MIN;
 }
 
-void signal_tester_client_free(signal_tester_client* stc)
+void signal_tester_client_free(signal_tester_client_t* stc)
 {
   if (stc->j_client != NULL)
   {
@@ -65,17 +65,17 @@ void signal_tester_client_free(signal_tester_client* stc)
   free(stc);
 }
 
-float signal_tester_client_rms(signal_tester_client* stc)
+float signal_tester_client_rms(signal_tester_client_t* stc)
 {
   return sqrtf(stc->sum / stc->n);
 }
 
-void signal_tester_client_activate(signal_tester_client* stc)
+void signal_tester_client_activate(signal_tester_client_t* stc)
 {
   jack_activate(stc->j_client);
 }
 
-void signal_tester_client_deactivate(signal_tester_client* stc)
+void signal_tester_client_deactivate(signal_tester_client_t* stc)
 {
   jack_deactivate(stc->j_client);
 }
@@ -83,7 +83,7 @@ void signal_tester_client_deactivate(signal_tester_client* stc)
 int stc_process (jack_nframes_t nframes, void *arg)
 {
   jack_default_audio_sample_t *buf;
-  signal_tester_client* stc = (signal_tester_client*) arg;
+  signal_tester_client_t* stc = (signal_tester_client_t*) arg;
 
   buf = jack_port_get_buffer(stc->in_port, nframes);
 

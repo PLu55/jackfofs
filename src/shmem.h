@@ -1,0 +1,37 @@
+#ifndef __SHM_H_
+#define __SHM_H_
+
+#include "fof_queue.h"
+
+/* memory layout:
+
+ *************************
+ shmem_t                   
+ *************************
+ fof_t[n_slots]            <--- q->slot
+ *************************
+ fof_t[n_max_fofs]         
+ **************************/
+
+typedef struct shmem_s shmem_t;
+typedef struct shmem_offsets_s shmem_offsets_t;
+
+struct shmem_offsets_s
+{
+  size_t slots;
+  size_t fofs;
+  size_t size;
+};
+
+struct shmem_s
+{
+  shmem_t* base;
+  fof_queue_t q;
+};
+
+shmem_t* shmem_create(setup_t* setup, int* status);
+shmem_t* shmem_link(setup_t* setup, int* status);
+char* shmem_aligning_ptr(char* ptr, size_t alignment_size);
+size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off);
+
+#endif

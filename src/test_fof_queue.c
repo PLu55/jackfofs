@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdio.h>
 #include <fofs.h>
 #include <math.h>
@@ -6,73 +7,157 @@
 
 #include "jfofs_private.h"
 #include "fof_queue.h"
+#include "shmem.h"
 #include "test_util.h"
 
-void test_fof_queue_chunk_handling(void)
+void test_fof_queue_add(void)
 {
-  int sample_rate = 48000;
-  int buffer_size = 128;
   int status;
-  fof fof;
-  fof_queue* q;
-  chunk* chk;
-  setup _setup;
-
-  _setup.mode = FOF_MONO;
-  _setup.n_clients = 1;
-  _setup.n_preallocate_fofs = 1024;
-  _setup.n_slots = 64;
-  _setup.n_free_chunks = 10;
-  _setup.chunk_size = 16;
-  
-  TEST_ASSERT_EQUAL_UINT64(64, sizeof(chunk));
-  TEST_ASSERT_EQUAL_UINT64(64, sizeof(fof));
+  setup_t setup;
+  shmem_t* shmem;
+  fof_queue_t* q;
+  //fof_t* fof;
+  fof_t fof_in;
     
-  q = fof_queue_new(sample_rate, &_setup, buffer_size, &status);
-   TEST_ASSERT_NOT_NULL(q);
+  setup.mode = FOF_MONO;
+  setup.n_clients = 1;
+  setup.n_preallocate_fofs = 1024;
+  setup.n_max_fofs = 1024;
+  setup.n_slots = 32;
+  setup.sample_rate = 48000;
+  setup.buffer_size = 256;
 
-   chk = q->free_chunks;
-   for (int i = 0; i < _setup.n_free_chunks; i++)
-   {
-     TEST_ASSERT_NOT_NULL(chk);
-     chk = chk->next;
-   }
-   TEST_ASSERT_NULL(chk);
+  shmem = shmem_create(&setup, &status);
+  TEST_ASSERT_NOT_NULL(shmem);
+  
+  q = &(shmem->q);
+  fof_queue_init(q, &setup);
+  
+  fof_default(&fof_in);
+  status = fof_queue_add(q, 0UL, &(fof_in.argv));
 
-   chk = get_free_chunk(q);
-   TEST_ASSERT_NOT_EQUAL(q->free_chunks, chk);
-   TEST_ASSERT_NULL(chk->next);
-   
-   add_chunks_to_free_list(q, chk, chk);
-   TEST_ASSERT_EQUAL(q->free_chunks, chk);
-   TEST_ASSERT_NOT_NULL(chk->next);
-
-   fof_queue_free(q);
+  TEST_ASSERT_NULL(q->slot[0]->next);
+  TEST_ASSERT_EQUAL_UINT64(0UL, q->slot[0]->time_us);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY(&(fof_in.argv), &(q->slot[0]->argv), FOF_NUMARGS); 
 }
+
+void test_fof_queue_init(void)
+{
+  int status;
+  setup_t setup;
+  shmem_t* shmem;
+  fof_queue_t* q;
+  fof_t* fof;
+  int i;
+  size_t mem_size;
+  size_t slots_off;
+  size_t fofs_off;
+  
+  setup.mode = FOF_MONO;
+  setup.n_clients = 1;
+  setup.n_preallocate_fofs = 1024;
+  setup.n_max_fofs = 1024;
+  setup.n_slots = 32;
+  setup.sample_rate = 48000;
+  setup.buffer_size = 256;
+
+  //printf("page size: %d\n",  getpagesize());
+  printf(" sizeof(fof_t): %ld\n",  sizeof(fof_t));
+  printf(" sizeof(shmem_t): %ld\n",  sizeof(shmem_t));
+  TEST_ASSERT_EQUAL_PTR((char*)0x7f61667f3000UL,
+			shmem_aligning_ptr((char*)0x7f61667f3000UL, 64UL));
+  TEST_ASSERT_EQUAL_PTR((char*)0x7f61667f3040UL,
+			shmem_aligning_ptr((char*)0x7f61667f3017UL, 64UL));
+  
+  shmem = shmem_create(&setup, &status);
+  TEST_ASSERT_NOT_NULL(shmem);
+
+  q = &(shmem->q);
+
+  mem_size = shmem_layout(&setup, &slots_off, &fofs_off);
+  printf("mem_size: %ld slots_off: %ld fofs_off: %ld\n", mem_size, slots_off, fofs_off);
+  printf("shmem: %p %p %p %p\n", shmem, (char*)shmem + slots_off,
+	 (char*)shmem + fofs_off,  (char*)shmem + mem_size);
+
+  fof_queue_init(q, &setup);
+
+  TEST_ASSERT_EQUAL_UINT64(0UL, q->current_frame);
+  TEST_ASSERT_EQUAL_UINT64(0UL, q->current_frame_check);
+  TEST_ASSERT_EQUAL_INT(0, q->current_slot);
+  TEST_ASSERT_EQUAL_INT(setup.n_slots, q->n_slots);
+  TEST_ASSERT_EQUAL_INT(setup.sample_rate, q->sample_rate);
+  TEST_ASSERT_EQUAL_INT(setup.buffer_size, q->buffer_size);
+  TEST_ASSERT_NULL(q->excess);
+  TEST_ASSERT_NOT_NULL(q->free_fofs);
+  TEST_ASSERT_NOT_NULL(q->slot);
+  TEST_ASSERT_EQUAL_PTR((char*)shmem + slots_off, q->slot);
+  TEST_ASSERT_EQUAL_PTR((char*)shmem + fofs_off, q->free_fofs);
+  
+  for (i = 0; i < setup.n_slots; i++)
+  {
+    TEST_ASSERT_NULL(q->slot[i]);
+  }
+
+  fof = q->free_fofs;
+  i = 0;
+  while(fof)
+  {
+    i++;
+    if (i > setup.n_max_fofs)
+      break;
+    TEST_ASSERT_TRUE((char*)fof + sizeof(fof_t) <= (char*)shmem + mem_size);
+    fof = fof->next;
+  }
+  TEST_ASSERT_EQUAL_INT(setup.n_max_fofs, i);
+  fof = q->free_fofs + setup.n_max_fofs - 1;
+  TEST_ASSERT_NULL(fof->next);
+  printf("last fof: %p\n", fof); 
+
+#if 0
+  char filename[50];
+  sprintf(filename, "/proc/%d/maps", getpid());
+  FILE* f = fopen(filename, "r");
+  if (f == NULL)
+  {
+    printf("Error: failed to open file.\n");
+    return;
+  }
+  
+  char line[256];
+  while (fgets(line, sizeof(line), f)) {
+    printf("%s", line);
+  }
+  fclose(f);
+#endif
+  
+  return;
+}
+
+#if 0
 
 void test_fof_queue(void)
 {
   int sample_rate = 48000;
   int buffer_size = 128;
   int status;
-  fof fof;
-  fof_queue* q;
-  setup _setup;
+  fof_t fof;
+  fof_queue_t* q;
+  setup_t setup;
 
-  _setup.mode = FOF_MONO;
-  _setup.n_clients = 1;
-  _setup.n_preallocate_fofs = 1024;
-  _setup.n_slots = 64;
-  _setup.n_free_chunks = 10;
-  _setup.chunk_size = 10;
+  setup.mode = FOF_MONO;
+  setup.n_clients = 1;
+  setup.n_preallocate_fofs = 1024;
+  setup.n_slots = 64;
+  setup.n_free_chunks = 10;
+  setup.chunk_size = 10;
   
-  q = fof_queue_new(sample_rate, &_setup, buffer_size, &status);
+  q = fof_queue_new(sample_rate, &setup, buffer_size, &status);
   
   TEST_ASSERT_NOT_NULL(q);
   TEST_ASSERT_EQUAL_INT(0, q->head);
   TEST_ASSERT_EQUAL_UINT64(0, q->next_frame);
   TEST_ASSERT_EQUAL_INT(buffer_size, q->slot_size);
-  TEST_ASSERT_EQUAL_INT(_setup.n_slots, q->n_slots);
+  TEST_ASSERT_EQUAL_INT(setup.n_slots, q->n_slots);
   TEST_ASSERT_TRUE(fabs(sample_rate - q->sample_rate) < 1e-9);
   TEST_ASSERT_NULL(q->excess);
     
@@ -84,7 +169,7 @@ void test_fof_queue(void)
   TEST_ASSERT_NOT_NULL(q->slot[0]);
   TEST_ASSERT_NULL(q->slot[0]->next);
   TEST_ASSERT_EQUAL_INT(1, q->slot[0]->count);
-  TEST_ASSERT_EQUAL_INT(_setup.chunk_size, q->slot[0]->max_count);
+  TEST_ASSERT_EQUAL_INT(setup.chunk_size, q->slot[0]->max_count);
   TEST_ASSERT_NOT_NULL(q->slot[0]->fof);
   // Should be TEST_ASSERT_EQUAL_DOUBLE but how to activate DOUBLE in Unity ?
   TEST_ASSERT_EQUAL_INT64(fof.time_us, q->slot[0]->fof[0].time_us);
@@ -106,7 +191,7 @@ void test_fof_queue(void)
 
   // Overflow a chunk to force a new chunk to be added. 
   chunk* chunk = q->slot[2];
-  for (int i = 2; i < _setup.chunk_size + 1; i++)
+  for (int i = 2; i < setup.chunk_size + 1; i++)
   {
     fof.argv[FOF_ARG_freq] = (float) (2 + i);
     status = fof_queue_add(q, &fof);
@@ -114,10 +199,10 @@ void test_fof_queue(void)
   TEST_ASSERT_TRUE(chunk != q->slot[2]);
   TEST_ASSERT_EQUAL_PTR(chunk, q->slot[2]->next);
   TEST_ASSERT_EQUAL_INT(1, q->slot[2]->count);
-  TEST_ASSERT_EQUAL_INT(_setup.chunk_size, q->slot[2]->next->count);
+  TEST_ASSERT_EQUAL_INT(setup.chunk_size, q->slot[2]->next->count);
 
   // Fof is added to the excess slot
-  fof.time_us = (buffer_size *  (_setup.n_slots + 1) * 1000000ULL)
+  fof.time_us = (buffer_size *  (setup.n_slots + 1) * 1000000ULL)
     / sample_rate;
   printf("nnn: %ld %f\n",fof.time_us, (double)fof.time_us* 1e-6); 
   fof.argv[FOF_ARG_freq] = 1000.0f;
@@ -148,3 +233,4 @@ void test_fof_queue(void)
      
 }
 
+#endif

@@ -9,9 +9,9 @@
 
 int dsp_client_process (jack_nframes_t nframes, void *arg);
 
-dsp_client* dsp_client_new(setup* _setup, int* status)
+dsp_client_t* dsp_client_new(setup_t* setup, int* status)
 {
-  dsp_client* dsp;
+  dsp_client_t* dsp;
   const char *client_name = "jfofs_dsp";
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
@@ -19,14 +19,14 @@ dsp_client* dsp_client_new(setup* _setup, int* status)
   jack_nframes_t sample_rate;
   jack_nframes_t buffer_size;
 
-  *status = posix_memalign((void**) &dsp, CACHE_LINE_SIZE, sizeof(dsp_client));
+  *status = posix_memalign((void**) &dsp, CACHE_LINE_SIZE, sizeof(dsp_client_t));
   if (dsp == NULL)
   {
     return NULL;
   }
 
   dsp->n_fofs = 0;
-  dsp->n_chans = fof_ModeToChannels(_setup->mode);
+  dsp->n_chans = fof_ModeToChannels(setup->mode);
   dsp->j_client = jack_client_open(client_name, options, &jstatus, server_name);
   
   if (dsp->j_client == NULL)
@@ -40,8 +40,8 @@ dsp_client* dsp_client_new(setup* _setup, int* status)
   sample_rate = jack_get_sample_rate(dsp->j_client);
   buffer_size = jack_get_buffer_size(dsp->j_client);
     
-  dsp->fof_bank = fof_newBank(sample_rate, _setup->mode,
-			      _setup->n_preallocate_fofs, (int) buffer_size);
+  dsp->fof_bank = fof_newBank(sample_rate, setup->mode,
+			      setup->n_preallocate_fofs, (int) buffer_size);
   if (dsp->fof_bank == NULL)
   {
     free(dsp);
@@ -73,19 +73,19 @@ dsp_client* dsp_client_new(setup* _setup, int* status)
   return dsp;
 }
 
-int dsp_client_activate(dsp_client* dsp)
+int dsp_client_activate(dsp_client_t* dsp)
 {
   return jack_activate(dsp->j_client);
 }
 
-int dsp_client_deactivate(dsp_client* dsp)
+int dsp_client_deactivate(dsp_client_t* dsp)
 {
   return jack_deactivate(dsp->j_client);
 }
 
 int dsp_client_process (jack_nframes_t nframes, void *arg)
 {
-  dsp_client* dsp = (dsp_client*) arg;
+  dsp_client_t* dsp = (dsp_client_t*) arg;
   jack_default_audio_sample_t *buf[MAX_CHANNELS];
 
   for(int i = 0; i < dsp->n_chans; i++)
@@ -98,7 +98,7 @@ int dsp_client_process (jack_nframes_t nframes, void *arg)
   return 0;
 }
 
-void dsp_client_free(dsp_client* dsp)
+void dsp_client_free(dsp_client_t* dsp)
 {
   dsp_client_deactivate(dsp);
   jack_client_close(dsp->j_client);

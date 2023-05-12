@@ -10,23 +10,23 @@
 #include "fof_queue.h"
 #include "jfofs.h"
 
-void test_manager_with_setup(setup* _setup, signal_tester_client* stc);
+void test_manager_with_setup(setup_t* setup, signal_tester_client_t* stc);
 
 void test_manager(void)
 {
-  signal_tester_client* stc;
+  signal_tester_client_t* stc;
   int status;
   jack_nframes_t sample_rate;
-  setup _setup;
+  setup_t setup;
 
-  //_setup.mode = FOF_MONO;
-  //_setup.mode = FOF_STEREO;
-  _setup.mode = FOF_AMB1D;
-  _setup.n_clients = 6;
-  _setup.n_preallocate_fofs = 1024;
-  _setup.n_slots = 64;
-  _setup.n_free_chunks = 128;
-  _setup.chunk_size = 256;
+  //setup.mode = FOF_MONO;
+  //setup.mode = FOF_STEREO;
+  setup.mode = FOF_AMB1D;
+  setup.n_clients = 6;
+  setup.n_preallocate_fofs = 1024;
+  setup.n_slots = 64;
+  setup.n_free_chunks = 128;
+  setup.chunk_size = 256;
   
   stc = signal_tester_client_new(&status);
   TEST_ASSERT_NOT_NULL(stc);
@@ -34,7 +34,7 @@ void test_manager(void)
   sample_rate = jack_get_sample_rate(stc->j_client);
   stc->m = (uint64_t)(sample_rate * 1.1);
 
-  test_manager_with_setup(&_setup, stc);
+  test_manager_with_setup(&setup, stc);
   
   printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
 
@@ -44,20 +44,20 @@ void test_manager(void)
   signal_tester_client_free(stc);
 }
 
-void test_manager_with_setup(setup* _setup, signal_tester_client* stc)
+void test_manager_with_setup(setup_t* setup, signal_tester_client* stc)
 {
   manager* mgr;
-  fof _fof;
+  fof_t _fof;
   int status;
   int n_chans;
   
-  n_chans = fof_ModeToChannels(_setup->mode);
+  n_chans = fof_ModeToChannels(setup->mode);
   
-  mgr = manager_new(_setup, &status);
+  mgr = manager_new(setup, &status);
   TEST_ASSERT_NOT_NULL(mgr);
   TEST_ASSERT_NOT_NULL(mgr->ctrl);
   
-  for (int i = 0; i < _setup->n_clients; i++)
+  for (int i = 0; i < setup->n_clients; i++)
   {
     TEST_ASSERT_NOT_NULL(mgr->dsp[i]);         /* TODO: should remove dsp from mgr */
     TEST_ASSERT_NOT_NULL(mgr->ctrl->dsp[i]);
@@ -66,7 +66,7 @@ void test_manager_with_setup(setup* _setup, signal_tester_client* stc)
   TEST_ASSERT_EQUAL_INT(0, manager_activate_clients(mgr));
   TEST_ASSERT_EQUAL_INT(0, manager_connect_clients(mgr));
 
-  for (int i = 0; i < _setup->n_clients; i++)
+  for (int i = 0; i < setup->n_clients; i++)
   {
     TEST_ASSERT_TRUE(jack_port_connected_to(mgr->ctrl->port,
 					    jack_port_name(mgr->dsp[i]->in_port)));

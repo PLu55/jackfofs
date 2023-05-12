@@ -11,9 +11,9 @@
 
 int ctrl_client_process(jack_nframes_t nframes, void *arg);
 
-ctrl_client* ctrl_client_new(setup* _setup, int* status)
+ctrl_client_t* ctrl_client_new(setup_t* setup, int* status)
 {
-  ctrl_client* ctrl;
+  ctrl_client_t* ctrl;
   const char *client_name = "jfofs_controller";
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
@@ -22,14 +22,14 @@ ctrl_client* ctrl_client_new(setup* _setup, int* status)
   jack_status_t jstatus;
   
   *status = posix_memalign((void**) &ctrl, CACHE_LINE_SIZE,
-			   sizeof(ctrl_client));
+			   sizeof(ctrl_client_t));
   if (ctrl == NULL)
   {
     return NULL;
   }
   ctrl->active = 0;
-  ctrl->n_clients = _setup->n_clients;
-  ctrl->mode = _setup->mode;
+  ctrl->n_clients = setup->n_clients;
+  ctrl->mode = setup->mode;
   for (int i = 0; i < MAX_DSP_CLIENTS; i++)
     ctrl->dsp[i] = NULL;
   ctrl->n = 0;
@@ -44,7 +44,7 @@ ctrl_client* ctrl_client_new(setup* _setup, int* status)
   
   sample_rate = jack_get_sample_rate(ctrl->j_client);
   buffer_size = jack_get_buffer_size(ctrl->j_client);
-  ctrl->q = fof_queue_new(sample_rate, _setup, buffer_size, status);
+  ctrl->q = fof_queue_new(sample_rate, setup, buffer_size, status);
   jack_set_process_callback (ctrl->j_client, ctrl_client_process,
 			     (void*) ctrl);
   ctrl->port = jack_port_register(ctrl->j_client, "out",
@@ -53,19 +53,19 @@ ctrl_client* ctrl_client_new(setup* _setup, int* status)
   return ctrl;
 }
 
-int ctrl_client_activate(ctrl_client* ctrl)
+int ctrl_client_activate(ctrl_client_t* ctrl)
 {
   ctrl->active = 1;
   return jack_activate(ctrl->j_client);
 }
 
-int ctrl_client_deactivate(ctrl_client* ctrl)
+int ctrl_client_deactivate(ctrl_client_t* ctrl)
 {
   ctrl->active = 0;
   return jack_deactivate(ctrl->j_client);
 }
 
-void ctrl_client_free(ctrl_client* ctrl)
+void ctrl_client_free(ctrl_client_t* ctrl)
 {
   jack_deactivate(ctrl->j_client);
   jack_client_close(ctrl->j_client);
@@ -76,7 +76,7 @@ void ctrl_client_free(ctrl_client* ctrl)
 
 int ctrl_client_process(jack_nframes_t nframes, void *arg)
 {
-  ctrl_client* ctrl = (ctrl_client*) arg;
+  ctrl_client_t* ctrl = (ctrl_client_t*) arg;
   fof_queue* q = ctrl->q;
   unsigned int slot_idx;
   chunk* chunk0;
@@ -90,7 +90,7 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
     return 0;
 
   /* TODO: fix atomic access, what memorder to use? */
-  n = __atomic_add_fetch(&q->next_frame, nframes, __ATOMIC_ACQ_REL);
+  n = __atomic_add_fetch(&q->current_frame, nframes, __ATOMIC_ACQ_REL);
   slot_idx = ((n - nframes) / q->slot_size) & (q->n_slots - 1);
   chunk0 = chk = q->slot[slot_idx];
   q->slot[slot_idx] = NULL;

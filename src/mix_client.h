@@ -14,9 +14,9 @@ struct mix_client_s
   jack_port_t* out_port[MAX_CHANNELS];
 };
 
-mix_client* mix_client_new(int n_chans, int* status);
-int mix_client_activate(mix_client* mix);
-int mix_client_deactivate(mix_client* mix);
-void mix_client_free(mix_client* mix);
+mix_client_t* mix_client_new(int n_chans, int* status);
+int mix_client_activate(mix_client_t* mix);
+int mix_client_deactivate(mix_client_t* mix);
+void mix_client_free(mix_client_t* mix);
 
 #endif

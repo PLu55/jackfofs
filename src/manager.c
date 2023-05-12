@@ -9,6 +9,7 @@
 #include <semaphore.h>
 
 #include "manager.h"
+#include "shmem.h"
 #include "fof_queue.h"
 #include "ctrl_client.h"
 #include "dsp_client.h"
@@ -19,25 +20,22 @@
 // jack_set_buffer_size_callback()
 // jack_set_sample_rate_callback()
 
-manager* manager_create(setup* _setup, int *status)
+manager_t* manager_create(setup_t* setup, int *status)
 {
-  manager* mgr;
+  manager_t* mgr;
   
-  mgr = manager_new(_setup, status);
+  mgr = manager_new(setup, status);
 
   if (mgr == NULL)
   {
-    *status = JFOFS_MEMORY;
+    *status = JFOFS_MEMORY_ERROR;
     return NULL;
   }
 
-  *status = manager_setup_ipc(mgr);
+  mgr->shmem = shmem_create(setup, status);
 
-  if (*status != 0)
-  {
-    manager_free(mgr);
-    return NULL;
-  }
+  mgr->q = &(mgr->shmem->q);
+  fof_queue_init(mgr->q, setup);
 
   *status = manager_activate_clients(mgr);
 
@@ -58,26 +56,26 @@ manager* manager_create(setup* _setup, int *status)
   return mgr;
 }
 
-manager* manager_new(setup* _setup, int *status)
+manager_t* manager_new(setup_t* setup, int *status)
 {
-  manager* mgr;
+  manager_t* mgr;
 
-  *status = posix_memalign((void**) &mgr, CACHE_LINE_SIZE, sizeof(manager));
+  *status = posix_memalign((void**) &mgr, CACHE_LINE_SIZE, sizeof(manager_t));
 
   if (mgr == NULL)
   {
     return NULL;
   }
 
-  memset((char*) mgr, 0, sizeof(manager));
-  memcpy((char*) &(mgr->setup), (char*) _setup, sizeof(setup));
-  mgr->ctrl = ctrl_client_new(&mgr->setup, status);
+  memset((char*) mgr, 0, sizeof(manager_t));
+  memcpy((char*) &(mgr->setup), (char*) setup, sizeof(setup_t));
+  mgr->ctrl = ctrl_client_new(setup, status);
   mgr->q = mgr->ctrl->q;
-  mgr->mix = mix_client_new(fof_ModeToChannels(mgr->setup.mode), status);
+  mgr->mix = mix_client_new(fof_ModeToChannels(setup->mode), status);
   
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    dsp_client* dsp = dsp_client_new(&mgr->setup, status);
+    dsp_client_t* dsp = dsp_client_new(setup, status);
     mgr->dsp[i] = dsp;
     mgr->ctrl->dsp[i] = dsp;
   }
@@ -85,9 +83,9 @@ manager* manager_new(setup* _setup, int *status)
   return mgr;
 }
 
-void manager_free(manager* mgr)
+void manager_free(manager_t* mgr)
 {
-  shm_unlink(SHM_NAME);
+  shm_unlink(SHMEM_NAME);
   if (mgr->ctrl != NULL)
     ctrl_client_free(mgr->ctrl);
 
@@ -101,12 +99,12 @@ void manager_free(manager* mgr)
   free(mgr);
 }
 
-inline jfofs_time systime()
+inline jfofs_time_t systime()
 {
   struct timespec tspec;
 
   clock_gettime(CLOCK_REALTIME, &tspec);
-  return (jfofs_time) tspec.tv_sec * TIME_1  + (jfofs_time) tspec.tv_nsec * 1000;
+  return (jfofs_time_t) tspec.tv_sec * TIME_1  + (jfofs_time_t) tspec.tv_nsec * 1000;
 }
 
 #if 0
@@ -141,7 +139,7 @@ void time_handling()
 }
 #endif
 
-int manager_activate_clients(manager* mgr)
+int manager_activate_clients(manager_t* mgr)
 {
   int status;
 
@@ -159,7 +157,7 @@ int manager_activate_clients(manager* mgr)
   return ctrl_client_activate(mgr->ctrl);
 }
 
-int manager_deactivate_clients(manager* mgr)
+int manager_deactivate_clients(manager_t* mgr)
 {
   int status;
 
@@ -178,7 +176,7 @@ int manager_deactivate_clients(manager* mgr)
   return mix_client_deactivate(mgr->mix);
 }
 
-int manager_connect_clients(manager* mgr)
+int manager_connect_clients(manager_t* mgr)
 {
   int status;
   
@@ -193,7 +191,7 @@ int manager_connect_clients(manager* mgr)
 
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    dsp_client* dsp = mgr->dsp[i];
+    dsp_client_t* dsp = mgr->dsp[i];
     for (int j = 0; j < dsp->n_chans; j++)
     {
       status = jack_connect(dsp->j_client,
@@ -205,43 +203,4 @@ int manager_connect_clients(manager* mgr)
   }
   
   return JFOFS_SUCCESS;
-}
-
-int manager_setup_ipc(manager* mgr)
-{
-  int fd;
-  int status;
-    
-  shm_unlink(SHM_NAME);
-  fd = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR|S_IWUSR);
-  if (fd < 0)
-    return JFOFS_SHM_ERROR;
-
-  ftruncate(fd, sizeof(shm_t));
-
-  mgr->shm = (shm_t*) mmap(NULL, sizeof(shm_t) , PROT_READ | PROT_WRITE,
-			   MAP_SHARED, fd, 0);
-
-  if (mgr->shm == 0)
-    return JFOFS_SHM_ERROR;
-    
-  status = sem_init(&mgr->shm->sem1, 1, 0);
-  status = sem_init(&mgr->shm->sem2, 1, 1);
-
-  if (status != 0)
-    return JFOFS_SHM_ERROR;
-
-  return JFOFS_SUCCESS;
-}
-
-void manager_ipc_loop(manager* mgr)
-{
-  shm_t* shm = mgr->shm;
-  
-  while(1)
-  {
-    sem_wait(&shm->sem1);
-    manager_add(mgr, &shm->fof);
-    sem_post(&shm->sem2);
-  }
 }

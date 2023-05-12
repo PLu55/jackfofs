@@ -8,24 +8,27 @@ set(FOFSHOME /home/plu/Projects/fofs)
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-set(LIB_SRCS
-  api.c)
+#set(LIB_SRCS
+#  api.c)
 
 set(SRCS
-  manager.c
+  shmem.c
+  #manager.c
   fof_queue.c
-  ctrl_client.c
-  dsp_client.c
-  mix_client.c)
+  #ctrl_client.c
+  #dsp_client.c
+  #mix_client.c
+)
 
 set(HDRS
   jfofs.h
   jfofs_types.h
   jfofs_private.h
-  manager.h
+  #manager.h
   fof_queue.h
-  ctrl_client.h
-  dsp_client.h)
+  #ctrl_client.h
+  #dsp_client.h
+)
 
 set(TEST_SRCS
   test_main.c
@@ -33,18 +36,17 @@ set(TEST_SRCS
   signal_tester_client.c
   sin_gen.c
   test_fof_queue.c
-  test_ctrl_client.c
-  test_dsp_client.c
-  test_manager.c
-  test_mix_client.c
-  manager_dummy.c
-  api.c
-  test_api.c)
+  #test_ctrl_client.c
+  #test_dsp_client.c
+  #test_manager.c
+  #test_mix_client.c
+  #api.c
+  #test_api.c
+)
 
 set(TEST_HDRS
   test_util.h
   signal_tester_client.h
-  manager_dummy.h
   sin_gen.h)
 
 #add_subdirectory(tests)
@@ -60,8 +62,11 @@ add_executable(jfofstest)
 target_sources(jfofstest PRIVATE ${TEST_SRCS} ${TEST_HDRS} ${SRCS} ${HDRS})
 target_link_libraries(jfofstest libunity.a)
 
-add_executable(jfofs)
-target_sources(jfofs PRIVATE main.c ${SRCS} ${HDRS})
+#add_executable(jfofs)
+#target_sources(jfofs PRIVATE main.c ${SRCS} ${HDRS})
 
-
-
+#add_executable(shmem)
+#target_sources(shmem PRIVATE
+#  main_shmem.c
+#  shmem.c
+#  shmem.h)

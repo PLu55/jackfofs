@@ -9,15 +9,15 @@
 
 int mix_client_process (jack_nframes_t nframes, void *arg);
 
-mix_client* mix_client_new(int n_chans, int* status)
+mix_client_t* mix_client_new(int n_chans, int* status)
 {
-  mix_client* mix;
+  mix_client_t* mix;
   const char *client_name = "jfofs_mix";
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
   jack_status_t jstatus;
   
-  *status = posix_memalign((void**) &mix, CACHE_LINE_SIZE, sizeof(mix_client));
+  *status = posix_memalign((void**) &mix, CACHE_LINE_SIZE, sizeof(mix_client_t));
   if (mix == NULL)
     return NULL;
 
@@ -58,7 +58,7 @@ mix_client* mix_client_new(int n_chans, int* status)
 
 int mix_client_process (jack_nframes_t nframes, void *arg)
 {
-  mix_client* mix = (mix_client*) arg;
+  mix_client_t* mix = (mix_client_t*) arg;
   jack_default_audio_sample_t *in_buf;
   jack_default_audio_sample_t *out_buf;
   //printf("n_chans: %d\±n", mix->n_chans);
@@ -74,17 +74,17 @@ int mix_client_process (jack_nframes_t nframes, void *arg)
     return 0;
 }
 
-int mix_client_activate(mix_client* mix)
+int mix_client_activate(mix_client_t* mix)
 {
   return jack_activate(mix->j_client);
 }
 
-int mix_client_deactivate(mix_client* mix)
+int mix_client_deactivate(mix_client_t* mix)
 {
   return jack_deactivate(mix->j_client);
 }
 
-void mix_client_free(mix_client* mix)
+void mix_client_free(mix_client_t* mix)
 {
   jack_deactivate(mix->j_client);
   jack_client_close(mix->j_client);

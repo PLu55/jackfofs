@@ -4,10 +4,11 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "jfofs.h"
 #include "jfofs_private.h"
 
-void fof_default(fof* _fof);
-void fof_print(fof* f);
-int fof_equal(fof* fof1, fof* fof2);
+void fof_default(fof_t* fof);
+void fof_print(fof_t* fof);
+int fof_equal(fof_t* fof1, fof_t* fof2);
 
 #endif

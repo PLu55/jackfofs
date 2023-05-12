@@ -86,7 +86,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
 static struct argp argp = { options, parse_opt, 0, doc };
 
-static manager* mgr = NULL;
+static manager_t* mgr = NULL;
 
 static void exit_handler(int status)
 {

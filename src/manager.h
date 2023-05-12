@@ -2,36 +2,36 @@
 #define __MANAGER_H__
 
 #include "jfofs_private.h"
+#include "shmem.h"
 #include "fof_queue.h"
 #include "ctrl_client.h"
 #include "dsp_client.h"
 #include "mix_client.h"
 
-typedef struct manager_s manager;
+typedef struct manager_s manager_t;
 
 struct manager_s
 {
-  ctrl_client* ctrl;
-  dsp_client* dsp[MAX_DSP_CLIENTS];
-  mix_client* mix;
-  fof_queue* q;
-  setup setup;
-  shm_t* shm;
+  ctrl_client_t* ctrl;
+  dsp_client_t* dsp[MAX_DSP_CLIENTS];
+  mix_client_t* mix;
+  fof_queue_t* q;
+  setup_t setup;
+  shmem_t* shmem;
 };
 
-static inline void manager_add(manager* mgr, fof* _fof)
+static inline void manager_add(manager_t* mgr, fof_t* _fof)
 {
   fof_queue_add(mgr->q, _fof);
 }
 
-manager* manager_create(setup* _setup, int *status);
-manager* manager_new(setup* _setup, int *status);
-void manager_free(manager* mgr);
-int manager_activate_clients(manager* mgr);
-int manager_deactivate_clients(manager* mgr);
-int manager_connect_clients(manager* mgr);
-//void manager_add(manager* mgr, fof* _fof);
-int manager_setup_ipc(manager* mgr);
-void manager_ipc_loop(manager* mgr);
+manager_t* manager_create(setup_t* setup, int *status);
+manager_t* manager_new(setup_t* setup, int *status);
+void manager_free(manager_t* mgr);
+int manager_activate_clients(manager_t* mgr);
+int manager_deactivate_clients(manager_t* mgr);
+int manager_connect_clients(manager_t* mgr);
+//void manager_add(manager_t* mgr, fof_t* _fof);
+int manager_create_shmem(manager_t* mgr);
 
 #endif

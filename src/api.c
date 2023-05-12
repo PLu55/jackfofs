@@ -27,7 +27,7 @@ jfofs* jfofs_new(int* status)
     *status = JFOFS_MEMORY;
     return NULL;
   }
-  _jfofs->fd = shm_open(SHM_NAME, O_RDWR, 0);
+  _jfofs->fd = shm_open(SHMEM_NAME, O_RDWR, 0);
 
   if (_jfofs->fd < 0)
   {

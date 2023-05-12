@@ -8,7 +8,7 @@
 #include "jfofs_types.h"
 #include "jfofs_private.h"
 
-typedef struct dsp_client_s dsp_client;
+typedef struct dsp_client_s dsp_client_t;
 
 struct dsp_client_s
 {
@@ -21,15 +21,15 @@ struct dsp_client_s
   void* pad[3];
 };
 
-static inline int dsp_client_add(dsp_client* dsp, fof* fof)
+static inline int dsp_client_add(dsp_client_t* dsp, fof_t* fof)
 {
   return fof_add_v(dsp->fof_bank, fof->time_us, fof->argv);
 }
 
-dsp_client* dsp_client_new(setup* _setup, int* status);
-int dsp_client_add(dsp_client* dsp, fof* fof);
-int dsp_client_activate(dsp_client* dsp);
-int dsp_client_deactivate(dsp_client* dsp);
-void dsp_client_free(dsp_client* dsp);
+dsp_client_t* dsp_client_new(setup_t* _setup, int* status);
+int dsp_client_add(dsp_client_t* dsp, fof_t* fof);
+int dsp_client_activate(dsp_client_t* dsp);
+int dsp_client_deactivate(dsp_client_t* dsp);
+void dsp_client_free(dsp_client_t* dsp);
 
 #endif
