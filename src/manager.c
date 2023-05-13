@@ -23,19 +23,21 @@
 manager_t* manager_create(setup_t* setup, int *status)
 {
   manager_t* mgr;
+  shmem_t* shmem;
   
-  mgr = manager_new(setup, status);
+  shmem = shmem_create(setup, status);
+  if (shmem == 0)
+  {
+    return NULL;
+  }
+
+  mgr = manager_new(shmem, setup, status);
 
   if (mgr == NULL)
   {
     *status = JFOFS_MEMORY_ERROR;
     return NULL;
   }
-
-  mgr->shmem = shmem_create(setup, status);
-
-  mgr->q = &(mgr->shmem->q);
-  fof_queue_init(mgr->q, setup);
 
   *status = manager_activate_clients(mgr);
 
@@ -56,7 +58,7 @@ manager_t* manager_create(setup_t* setup, int *status)
   return mgr;
 }
 
-manager_t* manager_new(setup_t* setup, int *status)
+manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status)
 {
   manager_t* mgr;
 
@@ -66,12 +68,20 @@ manager_t* manager_new(setup_t* setup, int *status)
   {
     return NULL;
   }
-
+  mgr->shmem = shmem;
   memset((char*) mgr, 0, sizeof(manager_t));
   memcpy((char*) &(mgr->setup), (char*) setup, sizeof(setup_t));
-  mgr->ctrl = ctrl_client_new(setup, status);
-  mgr->q = mgr->ctrl->q;
+  mgr->q = &(shmem->q);
+
+  mgr->ctrl = ctrl_client_new(setup, mgr->q, status);
   mgr->mix = mix_client_new(fof_ModeToChannels(setup->mode), status);
+
+  if (setup->sample_rate == 0)
+    setup->sample_rate = jack_get_sample_rate(mgr->ctrl->j_client);
+  if (setup->buffer_size == 0)
+    setup->buffer_size = jack_get_buffer_size(mgr->ctrl->j_client);
+
+  fof_queue_init(mgr->q, setup);
   
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
@@ -188,7 +198,7 @@ int manager_connect_clients(manager_t* mgr)
     if (status)
       return status;
   }
-
+  printf("AA\n");
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     dsp_client_t* dsp = mgr->dsp[i];
@@ -197,6 +207,7 @@ int manager_connect_clients(manager_t* mgr)
       status = jack_connect(dsp->j_client,
 			    jack_port_name(dsp->out_port[j]),
 			    jack_port_name(mgr->mix->in_port[j]));
+
       if (status)
 	return status;
     }

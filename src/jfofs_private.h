@@ -33,9 +33,10 @@ struct setup_s
   int n_preallocate_fofs;    /* number of pre allocated fofs in each client */
   int n_max_fofs;            /* maximum number of fofs */
   int n_slots;               /* number of slots in circular fof buffer */
-  //int slot_size;           /* maximum number of fofs per slot */
-  int sample_rate;           /* sample (frames) per second */
-  int buffer_size;           /* number of samples (frames) in each cycle */
+  int sample_rate;           /* sample (frames) per second, if zero it's 
+			      * filled by manager to what jack has */
+  int buffer_size;           /* number of samples (frames) in each cycle if zero
+			      * it's set by manager to what jack has */
 };
 
 static inline jack_nframes_t jfofs_time_to_nframes(uint64_t t, int sample_rate)

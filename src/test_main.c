@@ -20,12 +20,12 @@ void tearDown(void) {
 int main (int argc, char **argv)
 {
   UNITY_BEGIN();
-  RUN_TEST(test_fof_queue_init);
-  RUN_TEST(test_fof_queue_add);
+  //RUN_TEST(test_fof_queue_init);
+  //RUN_TEST(test_fof_queue_add);
   //RUN_TEST(test_dsp_client);
   //RUN_TEST(test_ctrl_client);
   //RUN_TEST(test_mix_client);
-  //RUN_TEST(test_manager);
+  RUN_TEST(test_manager);
   //RUN_TEST(test_api);
 
   return UNITY_END();

@@ -9,6 +9,7 @@
 #include "dsp_client.h"
 #include "ctrl_client.h"
 #include "fof_queue.h"
+#include "shmem.h"
 
 void test_ctrl_client(void)
 {
@@ -21,6 +22,8 @@ void test_ctrl_client(void)
   jack_nframes_t buffer_size;
   jack_time_t t0;
   setup_t setup;
+  shmem_t *shmem;
+  fof_queue_t* q;
 
   TEST_ASSERT_EQUAL_UINT(0, sizeof(ctrl_client_t) % CACHE_LINE_SIZE);
 
@@ -29,20 +32,23 @@ void test_ctrl_client(void)
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
-  setup.n_slots = 64;
-  setup.n_free_chunks = 128;
-  setup.chunk_size = 256;
+  setup.n_max_fofs = 1024;
+  setup.n_slots = 32;
+  setup.sample_rate = 48000;
+  setup.buffer_size = 256;
+
+  shmem = shmem_create(&setup, &status);
+  TEST_ASSERT_NOT_NULL(shmem);
   
-  ctrl = ctrl_client_new(&setup, &status);
+  q = &(shmem->q);
+  fof_queue_init(q, &setup);
+
+  ctrl = ctrl_client_new(&setup, q, &status);
   TEST_ASSERT_NOT_NULL(ctrl);
   TEST_ASSERT_NOT_NULL(ctrl->q);
-  TEST_ASSERT_EQUAL_INT(setup.n_slots, ctrl->q->n_slots);
-  TEST_ASSERT_EQUAL_INT(setup.n_free_chunks, ctrl->q->n_free_chunks);
 
   sample_rate = jack_get_sample_rate(ctrl->j_client);
   buffer_size = jack_get_buffer_size(ctrl->j_client);
-  TEST_ASSERT_EQUAL_UINT64(sample_rate, ctrl->q->sample_rate);
-  TEST_ASSERT_EQUAL_UINT32(buffer_size, ctrl->q->slot_size);
 
   ctrl->dsp[0] = dsp_client_new(&setup, &status);
   TEST_ASSERT_NOT_NULL(ctrl->dsp);
@@ -62,7 +68,7 @@ void test_ctrl_client(void)
   n = (jack_frame_time(ctrl->j_client) - t0 + 64) * 1000000ULL / sample_rate;
   fof_default(&fof);
   fof.time_us = n;
-  status = fof_queue_add(ctrl->q, &fof);
+  status = fof_queue_add(ctrl->q, n, fof.argv);
   sleep(5);
   
   ctrl_client_free(ctrl);

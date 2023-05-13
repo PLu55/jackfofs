@@ -20,13 +20,13 @@ struct manager_s
   shmem_t* shmem;
 };
 
-static inline void manager_add(manager_t* mgr, fof_t* _fof)
+static inline void manager_add(manager_t* mgr, jfofs_time_t time_us, float* argv)
 {
-  fof_queue_add(mgr->q, _fof);
+  fof_queue_add(mgr->q, time_us, argv);
 }
 
 manager_t* manager_create(setup_t* setup, int *status);
-manager_t* manager_new(setup_t* setup, int *status);
+manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status);
 void manager_free(manager_t* mgr);
 int manager_activate_clients(manager_t* mgr);
 int manager_deactivate_clients(manager_t* mgr);

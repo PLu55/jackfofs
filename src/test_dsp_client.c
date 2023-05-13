@@ -14,13 +14,14 @@ void test_dsp_client(void)
   int status;
   fof_t fof;
   setup_t setup;
-  
+
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
-  setup.n_slots = 0;
-  setup.n_free_chunks = 0;
-  setup.chunk_size = 0;
+  setup.n_max_fofs = 1024;
+  setup.n_slots = 32;
+  setup.sample_rate = 48000;
+  setup.buffer_size = 256;
 
   TEST_ASSERT_EQUAL_INT(0, sizeof(dsp_client_t) % CACHE_LINE_SIZE);
   dsp = dsp_client_new(&setup, &status);

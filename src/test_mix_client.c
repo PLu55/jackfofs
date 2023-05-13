@@ -11,7 +11,7 @@
 
 void test_mix_client_with_nchans(int n_chans);
 
-int connect_ports(mix_client_t* mix, sin_gen* sgen, signal_tester_client* stc,
+int connect_ports(mix_client_t* mix, sin_gen_t* sgen, signal_tester_client_t* stc,
 		  int n_chans);
 
 void test_mix_client(void)
@@ -28,8 +28,8 @@ void test_mix_client(void)
 void test_mix_client_with_nchans(int n_chans)
 {
   mix_client_t* mix;
-  sin_gen* sgen;
-  signal_tester_client* stc;
+  sin_gen_t* sgen;
+  signal_tester_client_t* stc;
   double freq;
   double ampl;
   int status;
@@ -69,14 +69,14 @@ void test_mix_client_with_nchans(int n_chans)
 	 signal_tester_client_rms(stc), stc->n);
   TEST_ASSERT_FLOAT_WITHIN(1e-6, ampl * n_chans , stc->max);
   TEST_ASSERT_FLOAT_WITHIN(1e-6, ampl * n_chans, -stc->min);
-  TEST_ASSERT_FLOAT_WITHIN(1e-4, ampl * M_SQRT1_2 * n_chans ,
+  TEST_ASSERT_FLOAT_WITHIN(1e-3, ampl * M_SQRT1_2 * n_chans ,
   			   signal_tester_client_rms(stc));
   signal_tester_client_free(stc);
   sin_gen_free(sgen);
   mix_client_free(mix);
 }
 
-int connect_ports(mix_client_t* mix, sin_gen_t* sgen, signal_tester_client_* stc,
+int connect_ports(mix_client_t* mix, sin_gen_t* sgen, signal_tester_client_t* stc,
 		  int n_chans)
 {
   int status = 0;

@@ -16,8 +16,9 @@ void test_fof_queue_add(void)
   setup_t setup;
   shmem_t* shmem;
   fof_queue_t* q;
-  //fof_t* fof;
+  fof_t* fof;
   fof_t fof_in;
+  uint64_t t;
     
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
@@ -34,11 +35,34 @@ void test_fof_queue_add(void)
   fof_queue_init(q, &setup);
   
   fof_default(&fof_in);
-  status = fof_queue_add(q, 0UL, &(fof_in.argv));
-
+  status = fof_queue_add(q, 0UL, fof_in.argv);
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
   TEST_ASSERT_NULL(q->slot[0]->next);
   TEST_ASSERT_EQUAL_UINT64(0UL, q->slot[0]->time_us);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(&(fof_in.argv), &(q->slot[0]->argv), FOF_NUMARGS); 
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY(fof_in.argv, q->slot[0]->argv, FOF_NUMARGS);
+
+  fof = q->slot[0];
+  status = fof_queue_add(q, 0UL, fof_in.argv);
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
+  TEST_ASSERT_EQUAL_PTR(fof, q->slot[0]->next);
+  TEST_ASSERT_EQUAL_UINT64(0UL, q->slot[0]->time_us);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY(fof_in.argv, q->slot[0]->argv, FOF_NUMARGS);
+
+  q->next_frame += setup.buffer_size;
+  status = fof_queue_add(q, 0UL, fof_in.argv);
+  TEST_ASSERT_EQUAL_INT(JFOFS_FOF_LATE_ERROR, status);
+
+  t = jfofs_nframes_to_time(2 * setup.buffer_size + 75UL, setup.sample_rate);
+  status = fof_queue_add(q, t, fof_in.argv);
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
+  TEST_ASSERT_NOT_NULL(q->slot[2]);
+  TEST_ASSERT_EQUAL_UINT64(t, q->slot[2]->time_us);
+
+  
+  t = jfofs_nframes_to_time(36 * setup.buffer_size + 75UL, setup.sample_rate);
+  status = fof_queue_add(q, t, fof_in.argv);
+  TEST_ASSERT_EQUAL_INT(JFOFS_FOF_EXCESS_INFO, status);
+  
 }
 
 void test_fof_queue_init(void)
@@ -81,8 +105,8 @@ void test_fof_queue_init(void)
 
   fof_queue_init(q, &setup);
 
-  TEST_ASSERT_EQUAL_UINT64(0UL, q->current_frame);
-  TEST_ASSERT_EQUAL_UINT64(0UL, q->current_frame_check);
+  TEST_ASSERT_EQUAL_UINT64(0UL, q->next_frame);
+  TEST_ASSERT_EQUAL_UINT64(0UL, q->next_frame_check);
   TEST_ASSERT_EQUAL_INT(0, q->current_slot);
   TEST_ASSERT_EQUAL_INT(setup.n_slots, q->n_slots);
   TEST_ASSERT_EQUAL_INT(setup.sample_rate, q->sample_rate);

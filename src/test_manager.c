@@ -3,6 +3,7 @@
 #include <fofs.h>
 #include <jack/jack.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "signal_tester_client.h"
 #include "manager.h"
@@ -19,14 +20,15 @@ void test_manager(void)
   jack_nframes_t sample_rate;
   setup_t setup;
 
-  //setup.mode = FOF_MONO;
+  setup.mode = FOF_MONO;
   //setup.mode = FOF_STEREO;
-  setup.mode = FOF_AMB1D;
-  setup.n_clients = 6;
+  //setup.mode = FOF_AMB1D;
+  setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
-  setup.n_slots = 64;
-  setup.n_free_chunks = 128;
-  setup.chunk_size = 256;
+  setup.n_max_fofs = 1024;
+  setup.n_slots = 32;
+  setup.sample_rate = 48000;
+  setup.buffer_size = 256;
   
   stc = signal_tester_client_new(&status);
   TEST_ASSERT_NOT_NULL(stc);
@@ -44,17 +46,20 @@ void test_manager(void)
   signal_tester_client_free(stc);
 }
 
-void test_manager_with_setup(setup_t* setup, signal_tester_client* stc)
+void test_manager_with_setup(setup_t* setup, signal_tester_client_t* stc)
 {
-  manager* mgr;
-  fof_t _fof;
+  manager_t* mgr;
+  fof_t fof;
   int status;
   int n_chans;
+  char msg[128];
   
   n_chans = fof_ModeToChannels(setup->mode);
-  
-  mgr = manager_new(setup, &status);
+  mgr = manager_create(setup, &status);
+
+  //sprintf(msg, "status: %d", status);
   TEST_ASSERT_NOT_NULL(mgr);
+  TEST_ASSERT_NOT_NULL_MESSAGE(mgr, msg);
   TEST_ASSERT_NOT_NULL(mgr->ctrl);
   
   for (int i = 0; i < setup->n_clients; i++)
@@ -63,9 +68,7 @@ void test_manager_with_setup(setup_t* setup, signal_tester_client* stc)
     TEST_ASSERT_NOT_NULL(mgr->ctrl->dsp[i]);
   }
   TEST_ASSERT_NOT_NULL(mgr->mix);
-  TEST_ASSERT_EQUAL_INT(0, manager_activate_clients(mgr));
-  TEST_ASSERT_EQUAL_INT(0, manager_connect_clients(mgr));
-
+ 
   for (int i = 0; i < setup->n_clients; i++)
   {
     TEST_ASSERT_TRUE(jack_port_connected_to(mgr->ctrl->port,
@@ -86,16 +89,17 @@ void test_manager_with_setup(setup_t* setup, signal_tester_client* stc)
   
   mgr->ctrl->n = 0;
   mgr->ctrl->m = 0;
-  jack_time_t t0 =jack_frame_time(mgr->ctrl->j_client);
-  uint64_t n =  jfofs_nframes_to_time_us(mgr->q->next_frame, mgr->q->sample_rate);
-
-  _fof.time_us = n + 100000;
-  fof_default(&_fof);
-  for(int i = 0; i < 1000; i++)
-    manager_add(mgr, &_fof);
+  //jack_time_t t0 =jack_frame_time(mgr->ctrl->j_client);
+  uint64_t n =  jfofs_nframes_to_time(mgr->q->next_frame, mgr->q->sample_rate);
+  jfofs_time_t t_us;
+  
+  t_us = n + 100000;
+  fof_default(&fof);
+  for(int i = 0; i < 1; i++)
+    manager_add(mgr, t_us, fof.argv);
   
   sleep(2);
-
+  printf("next_frame: %ld\n", mgr->q->next_frame);
   TEST_ASSERT_EQUAL_INT(0, manager_deactivate_clients(mgr));
   manager_free(mgr);
 }
