@@ -7,6 +7,7 @@
 #include "ctrl_client.h"
 #include "dsp_client.h"
 
+#include "test_util.h"
 #include <stdio.h>
 
 int ctrl_client_process(jack_nframes_t nframes, void *arg);
@@ -35,7 +36,7 @@ ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
   ctrl->last_dsp = 0;
   ctrl->n = 0;
   ctrl->m = 0;
-  
+  ctrl->syncronized = 0;
   ctrl->j_client = jack_client_open(client_name, options, &jstatus,
 				    server_name);
   if (ctrl->j_client == NULL)
@@ -43,8 +44,6 @@ ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
     return NULL;
   }
   
-
-
   jack_set_process_callback (ctrl->j_client, ctrl_client_process,
 			     (void*) ctrl);
   ctrl->port = jack_port_register(ctrl->j_client, "out",
@@ -84,26 +83,45 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
 
   if (ctrl->active == 0)
     return 0;
+  
   /* TODO: fix atomic access, what memorder to use? */
   n = __atomic_add_fetch(&q->next_frame, nframes, __ATOMIC_ACQ_REL);
-  slot_idx = ((n - nframes) / q->buffer_size) & (q->n_slots - 1);
+  n -= nframes;
+#ifdef TRACE
+  printf("ctrl_client n: %ld\n", n);
+  for (int i = 0; i < ctrl->n_clients; i++)
+    printf("   dsp[%d] n: %ld\n", i, dsp_get_next_frame(ctrl->dsp[i]));
+#endif
+  if (!ctrl->syncronized)
+  {
+    for (int i = 0; i < ctrl->n_clients; i++)
+      dsp_set_next_frame(ctrl->dsp[i], n);
+    ctrl->syncronized = 1;
+  }
+    
+  slot_idx = (n / q->buffer_size) & (q->n_slots - 1);
   fof =  q->slot[slot_idx];
+  /* TODO: check how this must be handled! */
+
+  __atomic_store_n(q->slot[slot_idx], NULL, __ATOMIC_RELEASE);
+  q->slot[slot_idx] = NULL;
+#ifdef TRACE
   if (fof)
   {
-    printf("Has fof: %p @ n: %ld\n", fof, n - nframes);
+    printf("Has fof: %p @ n: %ld\n", fof, n);
     fof_print(fof);
   }
-  /* TODO: check how this must be handled! */
-  q->slot[slot_idx] = NULL;
-  
+#endif
   /* TODO: check the implementation of fof */
   i = ctrl->last_dsp;
+  q->first_fof = fof;
   while (fof)
   {
     /* round robin, distribute the work over available dsp_clients */
     dsp = ctrl->dsp[i++];
     i %= ctrl->n_clients;
     dsp_client_add(dsp, fof);
+    q->last_fof = fof;
     fof = fof->next;
   }
   ctrl->last_dsp = i;

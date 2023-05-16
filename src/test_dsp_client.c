@@ -16,6 +16,7 @@ void test_dsp_client(void)
   setup_t setup;
 
   setup.mode = FOF_MONO;
+  setup.fofs_trace_level = 0;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
   setup.n_max_fofs = 1024;
@@ -32,7 +33,8 @@ void test_dsp_client(void)
   TEST_ASSERT_NOT_NULL(dsp->out_port[0]);
 
   stc = signal_tester_client_new(&status);
-  stc->m = (uint64_t)(48000.0 * 1.1);
+  signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
+  
   signal_tester_client_activate(stc);
   fof.time_us = fof_time(dsp->fof_bank);
   fof_default(&fof);

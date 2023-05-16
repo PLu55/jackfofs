@@ -31,5 +31,7 @@ int dsp_client_add(dsp_client_t* dsp, fof_t* fof);
 int dsp_client_activate(dsp_client_t* dsp);
 int dsp_client_deactivate(dsp_client_t* dsp);
 void dsp_client_free(dsp_client_t* dsp);
+uint64_t dsp_get_next_frame(dsp_client_t* dsp);
+void dsp_set_next_frame(dsp_client_t* dsp, uint64_t n);
 
 #endif

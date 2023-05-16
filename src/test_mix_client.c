@@ -8,6 +8,8 @@
 #include "signal_tester_client.h"
 #include "sin_gen.h"
 #include "test_util.h"
+#include "shmem.h"
+#include "fof_queue.h"
 
 void test_mix_client_with_nchans(int n_chans);
 
@@ -34,28 +36,42 @@ void test_mix_client_with_nchans(int n_chans)
   double ampl;
   int status;
   jack_nframes_t sample_rate;
+  shmem_t* shmem;
+  fof_queue_t* q;
+  setup_t setup;
   
   freq = 1000.0;
   ampl = 0.01;
 
+  setup.n_slots = 32;
+  setup.n_max_fofs = 1024;
+
+  sgen = sin_gen_new(freq, ampl, &status);
+  TEST_ASSERT_NOT_NULL(sgen);
+
+  setup.sample_rate = jack_get_sample_rate(sgen->j_client);
+  setup.buffer_size = jack_get_buffer_size(sgen->j_client);
   
-  mix = mix_client_new(n_chans, &status);
+  shmem = shmem_create(&setup, &status);
+  TEST_ASSERT_NOT_NULL(shmem);
+  
+  q = &(shmem->q);
+
+  fof_queue_init(q, &setup);
+
+  mix = mix_client_new(n_chans, q, &status);
   TEST_ASSERT_NOT_NULL(mix);
   TEST_ASSERT_EQUAL_INT(n_chans, mix->n_chans);
   TEST_ASSERT_NOT_NULL(mix->in_port[0]);
   TEST_ASSERT_NOT_NULL(mix->out_port[0]);
 
-  sample_rate = jack_get_sample_rate(mix->j_client);
-
-  sgen = sin_gen_new(freq, ampl, &status);
-  TEST_ASSERT_NOT_NULL(sgen);
-
   stc = signal_tester_client_new(&status);
   TEST_ASSERT_NOT_NULL(stc);
-  stc->m = (uint64_t)(sample_rate * 0.5);
+  
+  signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 0.5));
 
-  mix_client_activate(mix);
   sin_gen_activate(sgen);
+  mix_client_activate(mix);
   signal_tester_client_activate(stc);
   
   connect_ports(mix, sgen, stc, n_chans);

@@ -46,8 +46,9 @@ dsp_client_t* dsp_client_new(setup_t* setup, int* status)
   {
     free(dsp);
     return NULL;
-  } 
-
+  }
+  fof_set_trace_level(setup->fofs_trace_level);
+    
   dsp->in_port = jack_port_register(dsp->j_client, "in",
 				    JACK_DEFAULT_AUDIO_TYPE,
 				    JackPortIsInput, 0);
@@ -71,6 +72,16 @@ dsp_client_t* dsp_client_new(setup_t* setup, int* status)
   }
 
   return dsp;
+}
+
+uint64_t dsp_get_next_frame(dsp_client_t* dsp)
+{
+  return fof_timeI(dsp->fof_bank);
+}
+
+void dsp_set_next_frame(dsp_client_t* dsp, uint64_t n)
+{
+  fof_set_timeI(dsp->fof_bank, n);
 }
 
 int dsp_client_activate(dsp_client_t* dsp)

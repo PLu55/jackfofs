@@ -74,8 +74,9 @@ manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status)
   mgr->q = &(shmem->q);
 
   mgr->ctrl = ctrl_client_new(setup, mgr->q, status);
-  mgr->mix = mix_client_new(fof_ModeToChannels(setup->mode), status);
-
+  mgr->mix = mix_client_new(fof_ModeToChannels(setup->mode), mgr->q, status);
+  mgr->mix->q = mgr->q;
+  
   if (setup->sample_rate == 0)
     setup->sample_rate = jack_get_sample_rate(mgr->ctrl->j_client);
   if (setup->buffer_size == 0)
@@ -198,7 +199,7 @@ int manager_connect_clients(manager_t* mgr)
     if (status)
       return status;
   }
-  printf("AA\n");
+
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     dsp_client_t* dsp = mgr->dsp[i];

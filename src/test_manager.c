@@ -11,7 +11,9 @@
 #include "fof_queue.h"
 #include "jfofs.h"
 
-void test_manager_with_setup(setup_t* setup, signal_tester_client_t* stc);
+int count_free_fofs(fof_queue_t* q);
+
+void test_manager_with_setup(setup_t* setup, int n_fofs, signal_tester_client_t* stc);
 
 void test_manager(void)
 {
@@ -23,9 +25,10 @@ void test_manager(void)
   setup.mode = FOF_MONO;
   //setup.mode = FOF_STEREO;
   //setup.mode = FOF_AMB1D;
-  setup.n_clients = 1;
+  setup.fofs_trace_level = 0;
+  setup.n_clients = 6;
   setup.n_preallocate_fofs = 1024;
-  setup.n_max_fofs = 1024;
+  setup.n_max_fofs = 1024 * 10;
   setup.n_slots = 32;
   setup.sample_rate = 48000;
   setup.buffer_size = 256;
@@ -34,9 +37,9 @@ void test_manager(void)
   TEST_ASSERT_NOT_NULL(stc);
   signal_tester_client_activate(stc);
   sample_rate = jack_get_sample_rate(stc->j_client);
-  stc->m = (uint64_t)(sample_rate * 1.1);
+  signal_tester_client_set_nframes(stc, (uint64_t)(sample_rate * 1.1));
 
-  test_manager_with_setup(&setup, stc);
+  test_manager_with_setup(&setup, 4000, stc);
   
   printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
 
@@ -46,7 +49,7 @@ void test_manager(void)
   signal_tester_client_free(stc);
 }
 
-void test_manager_with_setup(setup_t* setup, signal_tester_client_t* stc)
+void test_manager_with_setup(setup_t* setup, int n_fofs, signal_tester_client_t* stc)
 {
   manager_t* mgr;
   fof_t fof;
@@ -95,11 +98,26 @@ void test_manager_with_setup(setup_t* setup, signal_tester_client_t* stc)
   
   t_us = n + 100000;
   fof_default(&fof);
-  for(int i = 0; i < 1; i++)
+  for(int i = 0; i < n_fofs; i++)
     manager_add(mgr, t_us, fof.argv);
   
   sleep(2);
   printf("next_frame: %ld\n", mgr->q->next_frame);
+
+  TEST_ASSERT_EQUAL_INT(setup->n_max_fofs, count_free_fofs(mgr->q));
   TEST_ASSERT_EQUAL_INT(0, manager_deactivate_clients(mgr));
   manager_free(mgr);
+}
+
+int count_free_fofs(fof_queue_t* q)
+{
+  int i = 0;
+  fof_t* fof = q->free_fofs;
+  
+  while (fof)
+  {
+    i++;
+    fof = fof->next;
+  }
+  return i;
 }

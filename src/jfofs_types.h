@@ -17,7 +17,7 @@ enum jfofs_status_e
   JFOFS_SHM_ERROR = 0x04,          /* can't open shared memory */
   JFOFS_SHM_MAP_ERROR = 0x05,      /* can't map shared memory */
   JFOFS_FOF_LIMIT_ERROR = 0x06,    /* num of fof limit is exceeded */
-  JFOFS_FOF_LATE_ERROR  = 0x07,    /* fof is to late, it's ignored. */
+  JFOFS_FOF_LATE_WARNING  = 0x07,    /* fof is to late, it's ignored. */
   JFOFS_FOF_EXCESS_INFO  = 0x1007, /* fof exceeds the fof queue. */
   JFOFS_JACK_ERROR_MASK = 0x10000,
 };

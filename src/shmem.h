@@ -26,11 +26,15 @@ struct shmem_offsets_s
 struct shmem_s
 {
   shmem_t* base;
+  size_t size;
   fof_queue_t q;
+  
 };
 
+/* TODO: replace setup with n_slots and n_max_fofs */
 shmem_t* shmem_create(setup_t* setup, int* status);
-shmem_t* shmem_link(setup_t* setup, int* status);
+shmem_t* shmem_link(int* status);
+void shmem_unlink(shmem_t* shmem);
 char* shmem_aligning_ptr(char* ptr, size_t alignment_size);
 size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off);
 

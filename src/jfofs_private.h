@@ -18,6 +18,7 @@ typedef struct mix_client_s mix_client_t;
 typedef struct fof_queue_s fof_queue_t;
 typedef struct setup_s setup_t;
 typedef struct shm_s shm_t;
+typedef struct fof_s fof_t;
 
 struct fof_s
 {
@@ -29,6 +30,7 @@ struct fof_s
 struct setup_s
 {
   FofMode mode;              /* type of fof, defines the number of channels */
+  int fofs_trace_level;      /* sets the trace level of the fofs lib */
   int n_clients;             /* number of parallel dsp clients */  
   int n_preallocate_fofs;    /* number of pre allocated fofs in each client */
   int n_max_fofs;            /* maximum number of fofs */

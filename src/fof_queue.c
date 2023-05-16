@@ -33,8 +33,9 @@ void fof_queue_init(fof_queue_t* q, setup_t *setup)
 
   q->sample_rate = setup->sample_rate;
   q->buffer_size = setup->buffer_size;
+  q->last_fof = NULL;
   q->excess = NULL;
-    printf("A\n");
+  
   /* this are set by shmem: 
    *   q->slot, the slots
    *   q->free_fofs,  point to the begining of memory area for fof 
@@ -46,7 +47,6 @@ void fof_queue_init(fof_queue_t* q, setup_t *setup)
   {
     q->slot[i] = NULL;
   }
-    printf("B\n");
   fof = q->free_fofs;
   for (int i = 0; i < setup->n_max_fofs - 1; i++)
   {
@@ -54,7 +54,7 @@ void fof_queue_init(fof_queue_t* q, setup_t *setup)
     fof->next = next;
     fof = next;
   }
-    printf("C\n");
+
   fof->next = NULL;
 }
 
@@ -62,13 +62,20 @@ fof_t* get_free_fof(fof_queue_t* q, int *status)
 {
   fof_t* fof;
 
-  fof = q->free_fofs;
-  if (fof == NULL)
+  while (true)
   {
-    *status = JFOFS_MEMORY_ERROR;
-    return NULL;
+    fof = __atomic_load_n(&(q->free_fofs),  __ATOMIC_ACQUIRE);
+
+    if (fof == NULL)
+    {
+      *status = JFOFS_MEMORY_ERROR;
+      return NULL;
+    }
+ 
+    if (__atomic_compare_exchange_n(q->free_fofs, fof, fof->next, false,
+				    __ATOMIC_RELEASE, __ATOMIC_RELAXED))
+      break;
   }
-  q->free_fofs = fof->next;
   fof->next = NULL;
 
   return fof;
@@ -84,52 +91,70 @@ int fof_queue_add(fof_queue_t* q, uint64_t time_us, float* fof_argv)
 {
   fof_t* fof;
   int status;
-  uint64_t frame;
+  uint64_t start_frame;
+  uint64_t next_frame;
   int slot_idx;
-  
+
   fof = get_free_fof(q, &status);
 
   if (fof == NULL)
   {
     return JFOFS_FOF_LIMIT_ERROR;
   }
-  frame = jfofs_time_to_nframes(time_us, q->sample_rate);
-  slot_idx = ((frame - q->next_frame) / q->buffer_size);
+  start_frame = jfofs_time_to_nframes(time_us, q->sample_rate);
+  
+  /* TODO: what happens if q->next_frame is changing during this call.
+   * How to syncronize  q->next_frame ? 
+   * Check next_frame just before inserting the fof in a slot.
+   */
+  
+  next_frame =__atomic_load_n(&q->next_frame,  __ATOMIC_ACQUIRE);
+  
+  slot_idx = ((start_frame - next_frame) / q->buffer_size);
+#ifdef TRACE
   printf("slot_idx: %d\n", slot_idx);
+#endif
   if (slot_idx < 0)
-    return JFOFS_FOF_LATE_ERROR;
+    return JFOFS_FOF_LATE_WARNING;
 
   fof->time_us = time_us;
   memcpy((char*)&(fof->argv), (char*)fof_argv, FOF_NUMARGS * sizeof(float));
 
   if (slot_idx >= q->n_slots)
   {
+#ifdef TRACE
     printf("fof inserted in excess slot\n");
+#endif
     fof->next = q->excess;
     q->excess = fof;
     return JFOFS_FOF_EXCESS_INFO;
   }
   else
   {
-    if (q->next_frame != q->next_frame_check)
+    if (next_frame != q->next_frame_check)
     {
-      printf("q->next_frame: %ld\n", q->next_frame);
-      q->current_slot = (q->next_frame / q->buffer_size) & (q->n_slots - 1);
-      q->next_frame_check = q->next_frame;
+#ifdef TRACE
+      printf("next_frame: %ld\n", next_frame);
+#endif
+      q->current_slot = (next_frame / q->buffer_size) & (q->n_slots - 1);
+      q->next_frame_check = next_frame;
     }
     slot_idx =  (slot_idx + q->current_slot) & (q->n_slots - 1);
+#ifdef TRACE
     printf("q->current_slot: %ld\n", q->current_slot);
     printf("fof inserted in slot: %d\n", slot_idx);
-
+#endif
     /* can relax if slot_idx is greater then current_slot + 1 .
-     * Better to compare frame > q->next_frame +  q->buffer_size
+     * Better to compare start_frame > next_frame +  q->buffer_size
      */
     
-    if (frame > q->next_frame +  q->buffer_size)
+    if (start_frame > next_frame +  q->buffer_size)
     {
-       printf("fof inserted in fast lane\n");
-       fof->next = q->slot[slot_idx];
-       q->slot[slot_idx] = fof;
+#ifdef TRACE
+      printf("fof inserted in fast lane\n");
+#endif
+      fof->next = q->slot[slot_idx];
+      q->slot[slot_idx] = fof;
     }
     else
     {
@@ -137,16 +162,65 @@ int fof_queue_add(fof_queue_t* q, uint64_t time_us, float* fof_argv)
        * but return with JFOFS_FOF_EXCESS_INFO status.
        */
       fof_t** slot_p = &(q->slot[slot_idx]);
-      while(true)
-      {
-	  fof->next = *slot_p;
-	  if (__atomic_compare_exchange_n(slot_p, slot_p, fof, false,
-					  __ATOMIC_RELEASE, __ATOMIC_RELAXED))
-	    break;
-      }
+      fof->next = *slot_p;
+	  if (!__atomic_compare_exchange_n(slot_p, slot_p, fof, false,
+					   __ATOMIC_RELEASE, __ATOMIC_RELAXED))
+	    return JFOFS_FOF_LATE_WARNING;
     }
   }
   return JFOFS_SUCCESS;
 }
 
+#if 0
 
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+
+struct ptr_s
+{
+  uint32_t low;
+  uint32_t high;
+};
+
+#else
+
+struct ptr_s
+{
+  uint32_t high;
+  uint32_t low;
+};
+
+#endif
+
+union ptr_u
+{
+  struct ptr_s p;
+  uint64_t v;
+};
+
+uint64_t fof_high;
+
+struct slot_s
+{
+  uint32_t buf_cnt;
+  uint32_t fof_low;
+};
+
+union slot_status_u
+{
+  struct slot_s s;
+  uint64_t key;
+};
+
+typedef slot_s slot_t;
+typedef slot_status_u slot_status_t;
+
+
+get_slot_status
+compute
+ace
+
+
+if (__atomic_compare_exchange_n(slot_p, slot_p, fof, false,
+					  __ATOMIC_RELEASE, __ATOMIC_RELAXED))
+
+#endif

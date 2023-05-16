@@ -18,11 +18,14 @@ struct fof_queue_s
   int sample_rate;  
   int buffer_size;
   fof_t* free_fofs;              /* list of free fofs avalible to the producer */
+  fof_t* first_fof;              /* list of fofs to be freed */
+  fof_t* last_fof;               /* last fof in the list to be freed */
   fof_t* excess;
   fof_t** slot;
 };
 
 void fof_queue_init(fof_queue_t* q, setup_t *setup);
 int fof_queue_add(fof_queue_t* q, jfofs_time_t time_us, float* fof_argv);
+void fof_queue_add_free_fofs(fof_queue_t* q, fof_t* head, fof_t* tail);
 
 #endif

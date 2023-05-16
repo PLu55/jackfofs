@@ -9,6 +9,7 @@
 #include "jfofs.h"
 #include "jfofs_types.h"
 #include "jfofs_private.h"
+#include "shmem.h"
 
 struct jfofs_s
 {
@@ -16,47 +17,37 @@ struct jfofs_s
   int fd;
 };
   
-jfofs* jfofs_new(int* status)
+jfofs_t* jfofs_new(int* status)
 {
-  jfofs* _jfofs;
+  jfofs_t* jfofs;
   size_t shm_size = sizeof(shm_t);
   
-  *status = posix_memalign((void**) &_jfofs, CACHE_LINE_SIZE, sizeof(jfofs));
-  if (_jfofs == NULL)
+  *status = posix_memalign((void**) &jfofs, CACHE_LINE_SIZE, sizeof(jfofs));
+  if (jfofs == NULL)
   {
     *status = JFOFS_MEMORY;
     return NULL;
   }
-  _jfofs->fd = shm_open(SHMEM_NAME, O_RDWR, 0);
 
-  if (_jfofs->fd < 0)
+  jfofs->shmem = shmem_link(status);
+
+  if (jfofs->shmem == NULL)
   {
-    free(_jfofs);
-    *status = JFOFS_SHM_ERROR;
-    return NULL;
-  }
-  
-  _jfofs->shm = (shm_t*) mmap(NULL, sizeof(shm_t) , PROT_READ | PROT_WRITE,
-			      MAP_SHARED, _jfofs->fd, 0);
-  if (_jfofs->shm == NULL)
-  {
-    jfofs_free(_jfofs);
+    free(jfofs);
     *status = JFOFS_SHM_ERROR;
     return NULL;
   }
 
-  return _jfofs;
+  return jfofs;
 }
 
-void jfofs_free(jfofs* _jfofs)
+void jfofs_free(jfofs_t* jfofs)
 {
-  close(_jfofs->fd);
-  free(_jfofs);
+  shmem_unlink(jfofs->shmem)
+  free(jfofs);
 }
 
-void jfofs_add(jfofs* _jfofs, fof* _fof)
+int jfofs_add(jfofs_t* jfofs, uint64_t time_us, float* fof_argv)
 {
-  sem_wait(&_jfofs->shm->sem2);
-  memcpy(&_jfofs->shm->fof, _fof, sizeof(fof));
-  sem_post(&_jfofs->shm->sem1);
+  return fof_queue_add(jfofs->shmem-q, time_us, fof_argv);
 }

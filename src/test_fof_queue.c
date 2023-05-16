@@ -50,7 +50,7 @@ void test_fof_queue_add(void)
 
   q->next_frame += setup.buffer_size;
   status = fof_queue_add(q, 0UL, fof_in.argv);
-  TEST_ASSERT_EQUAL_INT(JFOFS_FOF_LATE_ERROR, status);
+  TEST_ASSERT_EQUAL_INT(JFOFS_FOF_LATE_WARNING, status);
 
   t = jfofs_nframes_to_time(2 * setup.buffer_size + 75UL, setup.sample_rate);
   status = fof_queue_add(q, t, fof_in.argv);

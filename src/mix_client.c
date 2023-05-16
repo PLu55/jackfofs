@@ -6,10 +6,11 @@
 
 #include "jfofs_private.h"
 #include "mix_client.h"
+#include "fof_queue.h"
 
 int mix_client_process (jack_nframes_t nframes, void *arg);
 
-mix_client_t* mix_client_new(int n_chans, int* status)
+mix_client_t* mix_client_new(int n_chans, fof_queue_t* q, int* status)
 {
   mix_client_t* mix;
   const char *client_name = "jfofs_mix";
@@ -20,13 +21,16 @@ mix_client_t* mix_client_new(int n_chans, int* status)
   *status = posix_memalign((void**) &mix, CACHE_LINE_SIZE, sizeof(mix_client_t));
   if (mix == NULL)
     return NULL;
-
+  
+  mix->q = q;
   mix->j_client = jack_client_open(client_name, options, &jstatus, server_name);
+  
   if (mix->j_client == NULL)
   {
     free(mix);
     return NULL;
   }
+  
   jack_set_process_callback (mix->j_client, mix_client_process, mix);
   
   mix->n_chans = n_chans;
@@ -61,7 +65,9 @@ int mix_client_process (jack_nframes_t nframes, void *arg)
   mix_client_t* mix = (mix_client_t*) arg;
   jack_default_audio_sample_t *in_buf;
   jack_default_audio_sample_t *out_buf;
-  //printf("n_chans: %d\±n", mix->n_chans);
+  fof_queue_t* q = mix->q;
+  
+  //printf("n_chans: %d\n", mix->n_chans);
   for(int i = 0; i < mix->n_chans; i++)
   {
     in_buf = jack_port_get_buffer(mix->in_port[i], nframes);
@@ -71,7 +77,15 @@ int mix_client_process (jack_nframes_t nframes, void *arg)
     memcpy(out_buf, in_buf, nframes * sizeof(jack_default_audio_sample_t));
     //memset(out_buf, 0, nframes * sizeof(jack_default_audio_sample_t));
   }
-    return 0;
+  if (q->first_fof != NULL)
+  {
+    //printf("mix_client_process release fofs\n");
+    fof_queue_add_free_fofs(q, q->first_fof, q->last_fof);
+    q->first_fof = NULL;
+    q->last_fof = NULL;
+  }
+  //printf("mix_client_process <-----\n");
+  return 0;
 }
 
 int mix_client_activate(mix_client_t* mix)

@@ -52,7 +52,7 @@ void signal_tester_client_reset(signal_tester_client_t* stc)
   stc->n = 0;
   stc->sum = 0.0f;
   stc->min = FLT_MAX;
-  stc->max = FLT_MIN;
+  stc->max = -FLT_MAX;
 }
 
 void signal_tester_client_free(signal_tester_client_t* stc)
@@ -80,6 +80,11 @@ void signal_tester_client_deactivate(signal_tester_client_t* stc)
   jack_deactivate(stc->j_client);
 }
 
+void signal_tester_client_set_nframes(signal_tester_client_t* stc, uint64_t n)
+{
+  stc->n_frames = n;
+}
+
 int stc_process (jack_nframes_t nframes, void *arg)
 {
   jack_default_audio_sample_t *buf;
@@ -87,7 +92,7 @@ int stc_process (jack_nframes_t nframes, void *arg)
 
   buf = jack_port_get_buffer(stc->in_port, nframes);
 
-  for (int i = 0; i < nframes && stc->n < stc->m; i++)
+  for (int i = 0; i < nframes && stc->n < stc->n_frames; i++)
   {
     float x = buf[i];
     stc->sum += x * x;

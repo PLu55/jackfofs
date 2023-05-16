@@ -19,7 +19,9 @@ struct ctrl_client_s
   int last_dsp;
   int n;
   int m;
-  void* pad[2];
+  int syncronized;
+  void* pad[1];
+  mix_client_t* mix;
   dsp_client_t* dsp[MAX_DSP_CLIENTS];
 };
 
