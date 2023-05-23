@@ -58,11 +58,9 @@ void test_fof_queue_add(void)
   TEST_ASSERT_NOT_NULL(q->slot[2]);
   TEST_ASSERT_EQUAL_UINT64(t, q->slot[2]->time_us);
 
-  
   t = jfofs_nframes_to_time(36 * setup.buffer_size + 75UL, setup.sample_rate);
   status = fof_queue_add(q, t, fof_in.argv);
   TEST_ASSERT_EQUAL_INT(JFOFS_FOF_EXCESS_INFO, status);
-  
 }
 
 void test_fof_queue_init(void)
@@ -155,6 +153,72 @@ void test_fof_queue_init(void)
 #endif
   
   return;
+}
+
+void test_fof_queue_free_list(void)
+{
+  int status;
+  setup_t setup;
+  shmem_t* shmem;
+  fof_queue_t* q;
+  fof_t* fof;
+  fof_t* fof_2;
+  fof_t* fof_3;
+  
+  setup.mode = FOF_MONO;
+  setup.n_clients = 1;
+  setup.n_preallocate_fofs = 1024;
+  setup.n_max_fofs = 128;
+  setup.n_slots = 32;
+  setup.sample_rate = 48000;
+  setup.buffer_size = 256;
+
+  shmem = shmem_create(&setup, &status);
+  TEST_ASSERT_NOT_NULL(shmem);
+
+  q = &(shmem->q);
+  fof_queue_init(q, &setup);
+  TEST_ASSERT_NOT_NULL(q->free_fofs);
+  fof_2 = q->free_fofs;
+  fof = fof_queue_allocate_fof(q, &status);
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
+  TEST_ASSERT_EQUAL_PTR(fof_2, fof);
+  TEST_ASSERT_TRUE(fof != q->free_fofs);
+  TEST_ASSERT_NULL(fof->next);
+
+  fof_2 = fof;
+  for (int i = 1; i < setup.n_max_fofs; i++)
+  {
+    fof->next = fof_queue_allocate_fof(q, &status);
+    TEST_ASSERT_NOT_NULL(fof->next);
+    TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
+    fof = fof->next;
+  }
+  TEST_ASSERT_NULL(fof->next);
+  fof_3 = fof_queue_allocate_fof(q, &status);
+  TEST_ASSERT_NULL(fof_3);
+  TEST_ASSERT_EQUAL_INT(JFOFS_MEMORY_ERROR, status);
+  fof_queue_free_fofs(q, fof_2, fof);
+  TEST_ASSERT_EQUAL_PTR(fof_2, q->free_fofs);
+
+  fof = fof_queue_allocate_fof(q, &status);
+  TEST_ASSERT_NOT_NULL(fof);
+  fof_2 = fof->next = fof_queue_allocate_fof(q, &status);
+  TEST_ASSERT_NOT_NULL(fof->next);
+  fof_3 = q->free_fofs;
+  fof_queue_free_fofs(q, fof, fof->next);
+  TEST_ASSERT_EQUAL_PTR(fof, q->free_fofs);
+  TEST_ASSERT_EQUAL_PTR(fof->next, fof_2);
+  TEST_ASSERT_EQUAL_PTR(fof_2->next, fof_3);
+
+  fof = q->free_fofs;
+  int i = 0;
+  while(fof)
+  {
+    fof = fof->next;
+    i++;
+  }
+  TEST_ASSERT_EQUAL_INT(setup.n_max_fofs, i);
 }
 
 #if 0

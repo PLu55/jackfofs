@@ -17,7 +17,7 @@ typedef struct dsp_client_s dsp_client_t;
 typedef struct mix_client_s mix_client_t;
 typedef struct fof_queue_s fof_queue_t;
 typedef struct setup_s setup_t;
-typedef struct shm_s shm_t;
+typedef struct shmem_s shmem_t;
 typedef struct fof_s fof_t;
 
 struct fof_s

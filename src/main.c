@@ -13,13 +13,14 @@ static char doc[] =
   "jfofs is a jack client program that is a parallel fof synthesizer";
 
 static struct argp_option options[] = {
-  {"verbose",   'v', 0,            0,  "Produce verbose output" },
-  {"mode",      'm', "mode",       0,  "Fof mode: 1: mono, 2: stereo 3: quad: 4: ambiO1 5: ambi01D" },
-  {"n_clients", 'n', "n_clients",  0,  "number of parallel clients" },
-  {"n_fofs",    'p', "n_fofs",     0,  "number of preallocated fofs in" },
-  {"n_slots",   's', "n_slots",    0,  "number of slots in circular queue" },
-  {"chunk_size",'c', "chunk_size", 0,  "number of fofs per chunk" },
-  {"n_chunks",  'k', "n_chunks",   0,  "number of chunk to allocate" },
+  {"verbose",     'v', 0,            0, "Produce verbose output" },
+  {"mode",        'm', "mode",       0,
+   "Fof mode: 1: mono, 2: stereo 3: quad: 4: ambiO1 5: ambi01D" },
+  {"n_clients",   'n', "n_clients",  0, "number of parallel clients" },
+  {"n_fofs",      'p', "n_fofs",     0, "number of preallocated fofs in libfofs" },
+  {"n_slots",     's', "n_slots",    0, "number of slots in circular queue" },
+  {"n_max_fofs",  'q', "n_max_fofs", 0, "maximum number of fofs in queue" },
+  {"trace_level", 't', "trace",      0, "sets the trace level" },    
   { 0 }
 };
 
@@ -30,8 +31,9 @@ struct arguments
   int n_clients;
   int n_fofs;
   int n_slots;
-  int chunk_size;
-  int n_chunks;
+  int n_max_fofs;
+  int trace_level;
+
 };
 
 static error_t
@@ -56,12 +58,13 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 's':
       arguments->n_slots = atoi(arg);
       break;
-    case 'c':
-      arguments->chunk_size = atoi(arg);
+    case 'q':
+      arguments->n_max_fofs = atoi(arg);
       break;
-    case 'k':
-      arguments->n_chunks = atoi(arg);
+    case 't':
+      arguments->trace_level = atoi(arg);
       break;
+
 #if 0
     case ARGP_KEY_ARG:
       if (state->arg_num >= 1)
@@ -107,7 +110,7 @@ static void termination_handler (int signum)
 int main (int argc, char **argv)
 {
   struct arguments arguments;
-  setup _setup;
+  setup_t setup;
   int status;
   struct sigaction new_action, old_action;
 
@@ -131,20 +134,20 @@ int main (int argc, char **argv)
   arguments.mode = 1;
   arguments.n_clients = 1;
   arguments.n_fofs = 1024;
-  arguments.n_slots = 64;
-  arguments.chunk_size = 128;
-  arguments.n_chunks = 256;
+  arguments.n_max_fofs = 128;
+  arguments.n_slots = 32;
+  arguments.trace_level = 0;
   
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
 
-  _setup.mode = arguments.mode;
-  _setup.n_clients = arguments.n_clients;
-  _setup.n_preallocate_fofs =  arguments.n_fofs;
-  _setup.n_slots =  arguments.n_slots;
-  _setup.chunk_size = arguments.chunk_size;
-  _setup.n_free_chunks = arguments.n_chunks;
-
-  mgr = manager_create(&_setup, &status);
+  setup.mode = arguments.mode;
+  setup.n_clients = arguments.n_clients;
+  setup.n_preallocate_fofs =  arguments.n_fofs;
+  setup.n_slots =  arguments.n_slots;
+  setup.n_max_fofs = arguments.n_max_fofs;
+  setup.fofs_trace_level = arguments.trace_level;
+  
+  mgr = manager_create(&setup, &status);
   
   if (mgr == NULL)
   {
@@ -152,7 +155,7 @@ int main (int argc, char **argv)
     exit_handler(status);
   }
 
-  manager_ipc_loop(mgr);
+  sleep(-1);
     
   exit_handler(0);
   return 0;

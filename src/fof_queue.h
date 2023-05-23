@@ -13,6 +13,7 @@ struct fof_queue_s
 {
   uint64_t next_frame;
   uint64_t next_frame_check;
+  uint64_t frame_stamp;  
   uint64_t current_slot;
   int n_slots;
   int sample_rate;  
@@ -25,7 +26,10 @@ struct fof_queue_s
 };
 
 void fof_queue_init(fof_queue_t* q, setup_t *setup);
+fof_t* fof_queue_allocate_fof(fof_queue_t* q, int *status);
+void fof_queue_free_fof(fof_queue_t* q, fof_t* fof);
+void fof_queue_free_fofs(fof_queue_t* q, fof_t* head, fof_t* tail);
 int fof_queue_add(fof_queue_t* q, jfofs_time_t time_us, float* fof_argv);
-void fof_queue_add_free_fofs(fof_queue_t* q, fof_t* head, fof_t* tail);
+fof_t* fof_queue_take_slot(fof_queue_t* q, int slot_idx);
 
 #endif

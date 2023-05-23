@@ -34,19 +34,22 @@ void test_dsp_client(void)
 
   stc = signal_tester_client_new(&status);
   signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
-  
+
   signal_tester_client_activate(stc);
   fof.time_us = fof_time(dsp->fof_bank);
   fof_default(&fof);
   dsp_client_add(dsp, &fof);
   dsp_client_activate(dsp);
+
   jack_connect(dsp->j_client,
 	       jack_port_name(dsp->out_port[0]),
 	       jack_port_name(stc->in_port));
+
   TEST_ASSERT_TRUE(jack_port_connected_to(dsp->out_port[0],
 					  jack_port_name(stc->in_port)));
+
   sleep(2);
-  
+
   jack_disconnect(dsp->j_client,
 		  jack_port_name(dsp->out_port[0]),
 		  jack_port_name(stc->in_port));

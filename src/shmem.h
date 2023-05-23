@@ -2,6 +2,7 @@
 #define __SHM_H_
 
 #include "fof_queue.h"
+#include "manager.h"
 
 /* memory layout:
 
@@ -27,14 +28,15 @@ struct shmem_s
 {
   shmem_t* base;
   size_t size;
+  setup_t setup;
   fof_queue_t q;
-  
 };
 
 /* TODO: replace setup with n_slots and n_max_fofs */
 shmem_t* shmem_create(setup_t* setup, int* status);
 shmem_t* shmem_link(int* status);
 void shmem_unlink(shmem_t* shmem);
+void shmem_unmap(shmem_t* shmem);
 char* shmem_aligning_ptr(char* ptr, size_t alignment_size);
 size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off);
 

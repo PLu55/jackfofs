@@ -4,12 +4,11 @@
 #include <sys/mman.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "shmem.h"
 #include "fof_queue.h"
 #include "jfofs_private.h"
-
-#define MEMORY_ALIGNMENT 64UL
 
 size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off);
 
@@ -34,15 +33,19 @@ shmem_t* shmem_create(setup_t* setup, int* status)
   ftruncate(fd, size);
  
   shmem = (shmem_t*) mmap(NULL, size , PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-  if (shmem == NULL)
+  close(fd);
+  
+  if (shmem == MAP_FAILED)
   {
     *status = JFOFS_SHM_MAP_ERROR;
     return NULL;
   }
   
+  printf("shmem base (server): %p size: %ld\n", shmem, size);
   shmem->base = shmem;
+  shmem->size = size;
   shmem->q.slot = (fof_t**)((char*)shmem + slots_offset);
+  memcpy ((char*)&(shmem->setup), (char*)setup, sizeof(setup_t));
   
   /* not linked yet, linking is done in fof_queue_init */
   shmem->q.free_fofs =  (fof_t*)((char*)shmem + fofs_offset);
@@ -68,24 +71,32 @@ shmem_t* shmem_link(int* status)
   void* base;
   size_t size;
   
-  fd = shm_open(SHMEM_NAME, O_RDWR, 0);
+  if ((fd = shm_open(SHMEM_NAME, O_RDWR, 0)) == -1)
+  {  
+    *status = JFOFS_SHM_ERROR;
+    return NULL;
+  }
   
   shmem = (shmem_t*) mmap(NULL, sizeof(shmem_t) , PROT_READ | PROT_WRITE,
 			  MAP_SHARED, fd, 0);
 
-  if (shmem == NULL)
+  if (shmem == MAP_FAILED)
   {
-    *status = JFOFS_SHM_ERROR;
+    *status = JFOFS_SHM_MAP_ERROR;
     return NULL;
   }
   
   base = (void*)shmem->base;
   size = shmem->size;
+  printf("shmem base (client): %p size: %ld\n", base, size);
   munmap((void*) shmem, sizeof(shmem_t));
+  printf("shmem mapped at first to: %p\n", shmem); 
   /* mapping to make pointers work or mapping fails */
   shmem = (shmem_t*) mmap(base, size, PROT_READ | PROT_WRITE | MAP_FIXED,
-			MAP_SHARED, fd, 0);
-  if (shmem == NULL)
+  			MAP_SHARED, fd, 0);
+  close(fd);
+  printf("shmem mapped to: %p\n", shmem); 
+  if (shmem == MAP_FAILED || shmem != base)
   {
     *status = JFOFS_SHM_MAP_ERROR;
     return NULL;
@@ -94,10 +105,15 @@ shmem_t* shmem_link(int* status)
   return shmem;
 }
 
-void shmem_unlink(shmem_t* shmem)
+void shmem_unmap(shmem_t* shmem)
 {
   size_t size = shmem->size;
   munmap((void*) shmem, size);
+}
+
+void shmem_unlink(shmem_t* shmem)
+{
+  shm_unlink(SHMEM_NAME);
 }
 
 char* shmem_aligning_ptr(char* ptr, size_t alignment_size)
@@ -113,8 +129,8 @@ char* shmem_aligning_ptr(char* ptr, size_t alignment_size)
 size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off)
 {
   *slots_off = (size_t)shmem_aligning_ptr((char*) sizeof(shmem_t),
-					  MEMORY_ALIGNMENT);
+					  CACHE_LINE_SIZE);
   *fofs_off = *slots_off + sizeof(fof_t*) * setup->n_slots;
-  *fofs_off = (size_t)shmem_aligning_ptr((char*) *fofs_off, MEMORY_ALIGNMENT);
+  *fofs_off = (size_t)shmem_aligning_ptr((char*) *fofs_off, CACHE_LINE_SIZE);
   return *fofs_off + sizeof(fof_t) * setup->n_max_fofs;
 }

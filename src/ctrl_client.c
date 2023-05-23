@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <jack/jack.h>
-
+#include <time.h>
 #include <fofs.h>
 
 #include "fof_queue.h"
@@ -41,6 +41,7 @@ ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
 				    server_name);
   if (ctrl->j_client == NULL)
   {
+    *status = JFOFS_JACK_ERROR_MASK | jstatus;
     return NULL;
   }
   
@@ -71,6 +72,15 @@ void ctrl_client_free(ctrl_client_t* ctrl)
   free(ctrl);
 }
 
+static inline jfofs_time_t get_framestamp(ctrl_client_t* ctrl)
+{
+  //struct timespec tp;
+  //clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
+  //return tp.tv_sec * 1000000UL + tp.tv_nsec / 1000UL * ctrl->q->sample_rate;
+
+  return jack_frame_time(ctrl->j_client);
+}
+
 int ctrl_client_process(jack_nframes_t nframes, void *arg)
 {
   ctrl_client_t* ctrl = (ctrl_client_t*) arg;
@@ -80,13 +90,15 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
   int i = 0;
   dsp_client_t* dsp;
   uint64_t n;
+  uint64_t m;
 
   if (ctrl->active == 0)
     return 0;
   
   /* TODO: fix atomic access, what memorder to use? */
-  n = __atomic_add_fetch(&q->next_frame, nframes, __ATOMIC_ACQ_REL);
-  n -= nframes;
+  n = __atomic_fetch_add(&q->next_frame, nframes, __ATOMIC_RELEASE);
+  m = get_framestamp(ctrl);
+  __atomic_store_n (&(q->frame_stamp), m, __ATOMIC_RELEASE);
 #ifdef TRACE
   printf("ctrl_client n: %ld\n", n);
   for (int i = 0; i < ctrl->n_clients; i++)
@@ -100,11 +112,10 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
   }
     
   slot_idx = (n / q->buffer_size) & (q->n_slots - 1);
-  fof =  q->slot[slot_idx];
-  /* TODO: check how this must be handled! */
 
-  __atomic_store_n(q->slot[slot_idx], NULL, __ATOMIC_RELEASE);
-  q->slot[slot_idx] = NULL;
+  /* TODO: check how this must be handled, memorder? */
+  fof = __atomic_exchange_n(&(q->slot[slot_idx]), NULL, __ATOMIC_RELEASE);
+
 #ifdef TRACE
   if (fof)
   {

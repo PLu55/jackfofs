@@ -20,6 +20,7 @@ enum jfofs_status_e
   JFOFS_FOF_LATE_WARNING  = 0x07,    /* fof is to late, it's ignored. */
   JFOFS_FOF_EXCESS_INFO  = 0x1007, /* fof exceeds the fof queue. */
   JFOFS_JACK_ERROR_MASK = 0x10000,
+  JFOFS_SYSTEM_ERROR_MASK = 0x100000
 };
 
 #endif /* __jfofs_types_h__ */

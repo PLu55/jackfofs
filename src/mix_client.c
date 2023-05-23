@@ -80,7 +80,7 @@ int mix_client_process (jack_nframes_t nframes, void *arg)
   if (q->first_fof != NULL)
   {
     //printf("mix_client_process release fofs\n");
-    fof_queue_add_free_fofs(q, q->first_fof, q->last_fof);
+    fof_queue_free_fofs(q, q->first_fof, q->last_fof);
     q->first_fof = NULL;
     q->last_fof = NULL;
   }

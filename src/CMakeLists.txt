@@ -8,8 +8,10 @@ set(FOFSHOME /home/plu/Projects/fofs)
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-#set(LIB_SRCS
-#  api.c)
+set(LIB_SRCS
+  shmem.c
+  fof_queue.c
+  api.c)
 
 set(SRCS
   shmem.c
@@ -40,8 +42,8 @@ set(TEST_SRCS
   test_ctrl_client.c
   test_dsp_client.c
   test_mix_client.c
-  #api.c
-  #test_api.c
+  api.c
+  test_api.c
 )
 
 set(TEST_HDRS
@@ -49,24 +51,39 @@ set(TEST_HDRS
   signal_tester_client.h
   sin_gen.h)
 
+set(LIBS
+  libjack.so
+  libm.so
+  ${FOFSHOME}/build/libfofs.so)
+
 #add_subdirectory(tests)
 
 include_directories(${FOFSHOME}/src /usr/local/include)
 
-link_libraries(libjack.so)
-link_libraries(libm.so)
-link_libraries(${FOFSHOME}/build/libfofs.so)
+#link_libraries(libjack.so)
+#link_libraries(libm.so)
+#link_libraries(${FOFSHOME}/build/libfofs.so)
 
+add_executable(jfofs)
+target_sources(jfofs PRIVATE main.c ${SRCS} ${HDRS})
+target_link_libraries(jfofs ${LIBS})
+
+add_library(jfofs_api SHARED)
+set_target_properties(jfofs_api
+  PROPERTIES OUTPUT_NAME "jfofs")
+target_sources(jfofs_api PRIVATE ${LIB_SRCS})
 
 add_executable(jfofstest)
 target_sources(jfofstest PRIVATE ${TEST_SRCS} ${TEST_HDRS} ${SRCS} ${HDRS})
-target_link_libraries(jfofstest libunity.a)
-
-#add_executable(jfofs)
-#target_sources(jfofs PRIVATE main.c ${SRCS} ${HDRS})
+target_link_libraries(jfofstest libunity.a ${LIBS})
 
 #add_executable(shmem)
 #target_sources(shmem PRIVATE
 #  main_shmem.c
 #  shmem.c
 #  shmem.h)
+
+add_executable(timing)
+target_sources(timing PRIVATE
+  test_timing.c)
+target_link_libraries(timing libjack.so ${CMAKE_CURRENT_BINARY_DIR}/libjfofs.so)

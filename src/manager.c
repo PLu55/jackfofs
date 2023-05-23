@@ -118,38 +118,6 @@ inline jfofs_time_t systime()
   return (jfofs_time_t) tspec.tv_sec * TIME_1  + (jfofs_time_t) tspec.tv_nsec * 1000;
 }
 
-#if 0
-struct PLu_Fofs : public Unit
-{
-  FofBank* mBank;
-  int mState;
-  double mDtma;
-  double mTcorr;
-  double mTframe;
-#ifdef DEBUG
-  long frameCnt;
-#endif
-};
-
-/* At each buffer cycle in jack */
-void time_handling()
-{
-  double alpha = 0.01;
-  double tf, ts, dt;
-  
-  tf = fof_time(unit->mBank); /* frame counting */
-  ts = systime();
-  unit->mTframe = ts;
-  dt = ts - tf;
-  unit->mDtma = alpha * dt + (1.0-alpha) * unit->mDtma ;
-
-  if( fabs(unit->mDtma - dt) > 1.0)
-    unit->mDtma = dt;
-        
-    unit->mTcorr = round(unit->mDtma*1e4)*1e-4;
-}
-#endif
-
 int manager_activate_clients(manager_t* mgr)
 {
   int status;
@@ -157,7 +125,7 @@ int manager_activate_clients(manager_t* mgr)
   status = mix_client_activate(mgr->mix);
   if (status)
       return status;
-  
+   
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     status = dsp_client_activate(mgr->dsp[i]);
@@ -172,7 +140,7 @@ int manager_deactivate_clients(manager_t* mgr)
 {
   int status;
 
-  status = ctrl_client_deactivate(mgr->ctrl);
+  status = ctrl_client_deactivate(mgr->ctrl) ;
 
   if (status)
       return status;
@@ -216,3 +184,36 @@ int manager_connect_clients(manager_t* mgr)
   
   return JFOFS_SUCCESS;
 }
+
+/* Junk ************************************************************************/
+#if 0
+struct PLu_Fofs : public Unit
+{
+  FofBank* mBank;
+  int mState;
+  double mDtma;
+  double mTcorr;
+  double mTframe;
+#ifdef DEBUG
+  long frameCnt;
+#endif
+};
+
+/* At each buffer cycle in jack */
+void time_handling()
+{
+  double alpha = 0.01;
+  double tf, ts, dt;
+  
+  tf = fof_time(unit->mBank); /* frame counting */
+  ts = systime();
+  unit->mTframe = ts;
+  dt = ts - tf;
+  unit->mDtma = alpha * dt + (1.0-alpha) * unit->mDtma ;
+
+  if( fabs(unit->mDtma - dt) > 1.0)
+    unit->mDtma = dt;
+        
+    unit->mTcorr = round(unit->mDtma*1e4)*1e-4;
+}
+#endif

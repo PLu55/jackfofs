@@ -5,49 +5,93 @@
 #include <signal.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
 
 #include "jfofs.h"
 #include "jfofs_types.h"
 #include "jfofs_private.h"
+#include "api.h"
 #include "shmem.h"
 
-struct jfofs_s
-{
-  shm_t* shm;
-  int fd;
-};
-  
+#include "test_util.h"
+
 jfofs_t* jfofs_new(int* status)
 {
   jfofs_t* jfofs;
-  size_t shm_size = sizeof(shm_t);
-  
-  *status = posix_memalign((void**) &jfofs, CACHE_LINE_SIZE, sizeof(jfofs));
+  jack_status_t jstatus;
+
+  *status = posix_memalign((void**) &jfofs, CACHE_LINE_SIZE, sizeof(jfofs_t));
   if (jfofs == NULL)
   {
-    *status = JFOFS_MEMORY;
+    *status = JFOFS_MEMORY_ERROR;
     return NULL;
   }
 
+  jfofs->j_client = jack_client_open("jfofs_api", JackNullOption, &jstatus, NULL);
+
+  if (jfofs->j_client == NULL)
+  {
+    *status = JFOFS_JACK_ERROR_MASK | jstatus;
+    return NULL;
+  }
+  
+  jack_activate(jfofs->j_client);
+    
   jfofs->shmem = shmem_link(status);
 
   if (jfofs->shmem == NULL)
   {
-    free(jfofs);
-    *status = JFOFS_SHM_ERROR;
+    if (*status == JFOFS_SHM_MAP_ERROR)
+    {
+      fprintf(stderr, "Error jfofs_new: can't map shared memory!\n");
+    }
+    else
+    {
+      perror(strerror(errno));   
+      *status = JFOFS_SHM_ERROR;
+    }
     return NULL;
   }
-
+  
+  *status = JFOFS_SUCCESS;
   return jfofs;
 }
 
 void jfofs_free(jfofs_t* jfofs)
 {
-  shmem_unlink(jfofs->shmem)
+  jack_deactivate(jfofs->j_client);
+  jack_client_close(jfofs->j_client);
+  shmem_unmap(jfofs->shmem);
   free(jfofs);
 }
 
 int jfofs_add(jfofs_t* jfofs, uint64_t time_us, float* fof_argv)
 {
-  return fof_queue_add(jfofs->shmem-q, time_us, fof_argv);
+  return fof_queue_add(&(jfofs->shmem->q), time_us, fof_argv);
+}
+
+static inline uint64_t current_frame(jfofs_t* jfofs)
+{
+  uint64_t m;
+  uint64_t n;
+
+  n = jfofs->shmem->q.next_frame;
+  m = jack_frame_time(jfofs->j_client) - jfofs->shmem->q.frame_stamp;
+  return  (n + m);
+}
+
+uint64_t jfofs_get_frame(jfofs_t* jfofs)
+{
+  return current_frame(jfofs);
+}
+
+jfofs_time_t jfofs_get_time(jfofs_t* jfofs)
+{
+  return  current_frame(jfofs) * 1000000UL / jfofs->shmem->q.sample_rate;
+}
+
+int jfofs_sample_rate(jfofs_t* jfofs)
+{
+  return jfofs->shmem->q.sample_rate;
 }

@@ -94,6 +94,28 @@ int dsp_client_deactivate(dsp_client_t* dsp)
   return jack_deactivate(dsp->j_client);
 }
 
+/*
+ * memory layout of buffers:
+ *--------------------------------- 
+ * ptr-1
+ *---------------------------------
+ * ptr-2
+ *---------------------------------
+ *    ...
+ *---------------------------------
+ * ptr-n
+ *---------------------------------
+ * float arr-1[]
+ *---------------------------------
+ * float arr-2[]
+ *---------------------------------
+ *   ...
+ *---------------------------------
+ * float arr-1[]
+ *---------------------------------
+ *
+ */
+
 int dsp_client_process (jack_nframes_t nframes, void *arg)
 {
   dsp_client_t* dsp = (dsp_client_t*) arg;
