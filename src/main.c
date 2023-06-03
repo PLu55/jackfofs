@@ -15,12 +15,12 @@ static char doc[] =
 static struct argp_option options[] = {
   {"verbose",     'v', 0,            0, "Produce verbose output" },
   {"mode",        'm', "mode",       0,
-   "Fof mode: 1: mono, 2: stereo 3: quad: 4: ambiO1 5: ambi01D" },
-  {"n_clients",   'n', "n_clients",  0, "number of parallel clients" },
-  {"n_fofs",      'p', "n_fofs",     0, "number of preallocated fofs in libfofs" },
-  {"n_slots",     's', "n_slots",    0, "number of slots in circular queue" },
-  {"n_max_fofs",  'q', "n_max_fofs", 0, "maximum number of fofs in queue" },
-  {"trace_level", 't', "trace",      0, "sets the trace level" },    
+   "Fof mode: 1: mono, 2: stereo 3: quad: 4: ambiO1 5: ambi01D, default is 1" },
+  {"n_clients",   'n', "n",  0, "number of parallel clients, default is 1" },
+  {"n_fofs",      'p', "n",     0, "number of preallocated fofs in libfofs, default is 10240" },
+  {"n_slots",     's', "n",    0, "number of slots in circular queue, default is 32" },
+  {"n_max_fofs",  'q', "n", 0, "maximum number of fofs in queue, default is 1024" },
+  {"trace_level", 't', "trace",      0, "sets the trace level, default is 0" },    
   { 0 }
 };
 
@@ -133,8 +133,8 @@ int main (int argc, char **argv)
   arguments.verbose = 0;
   arguments.mode = 1;
   arguments.n_clients = 1;
-  arguments.n_fofs = 1024;
-  arguments.n_max_fofs = 128;
+  arguments.n_fofs = 10 * 1024;
+  arguments.n_max_fofs = 1024;
   arguments.n_slots = 32;
   arguments.trace_level = 0;
   

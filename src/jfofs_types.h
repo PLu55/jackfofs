@@ -7,7 +7,7 @@
 
 typedef uint64_t jfofs_time_t;
 typedef enum jfofs_status_e jfofs_status_t;
-
+    
 enum jfofs_status_e
 {
   JFOFS_SUCCESS = 0x00,
