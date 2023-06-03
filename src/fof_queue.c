@@ -17,7 +17,7 @@
  * case fof data. The number of slots must be a power of 2.
  *
  * A queue struct contains the queue array and data about the
- * queue. slot_size is the duration of a slot expressed in number of
+ * queue. buffer_size is the duration of a slot expressed in number of
  * samples.
  * 
  */
@@ -128,15 +128,6 @@ int fof_queue_add(fof_queue_t* q, uint64_t time_us, float* fof_argv)
    * How to syncronize  q->next_frame ? 
    * Check next_frame just before inserting the fof in a slot.
    */
-  
-  next_frame =__atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
-  
-  slot_idx = (start_frame - next_frame) / q->buffer_size;
-#ifdef TRACE
-  printf("slot_idx: %d\n", slot_idx);
-#endif
-  if (slot_idx < 0)
-    return JFOFS_FOF_LATE_WARNING;
 
   fof = fof_queue_allocate_fof(q, &status);
 
@@ -144,8 +135,20 @@ int fof_queue_add(fof_queue_t* q, uint64_t time_us, float* fof_argv)
     return JFOFS_FOF_LIMIT_ERROR;
 
   set_fof(fof, time_us, fof_argv);
+  
+  next_frame =__atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
+  
+recalculate:  
+  slot_idx = (start_frame - next_frame) / q->buffer_size;
+  
+#ifdef TRACE
+  printf("slot_idx: %d\n", slot_idx);
+#endif
+  if (slot_idx < 0)
+    return JFOFS_FOF_LATE_WARNING;
 
   /* TODO: implement excess handling. */
+  /* Case excess */
   if (slot_idx >= q->n_slots)
   {
 #ifdef TRACE
@@ -172,8 +175,13 @@ int fof_queue_add(fof_queue_t* q, uint64_t time_us, float* fof_argv)
     printf("q->current_slot: %ld\n", q->current_slot);
     printf("fof inserted in slot: %d\n", slot_idx);
 #endif
-    /* can relax if slot_idx is greater then current_slot + 1 .
-     * Better to compare start_frame > next_frame +  q->buffer_size
+    
+    /* Case: add fof to a slot that is not the current slot
+     *   The assumption that we can relax if slot_idx is greater then current_slot + 1 
+     *   is not valid, the access must be protected!
+     *
+     *   A better algorithm is needed, now a fof can end up in the wrong slot.
+     *   It's not a catastrophy as the case is handled by the fofs library. 
      */
     
     if (start_frame > next_frame + q->buffer_size)
@@ -181,21 +189,48 @@ int fof_queue_add(fof_queue_t* q, uint64_t time_us, float* fof_argv)
 #ifdef TRACE
       printf("fof inserted in fast lane\n");
 #endif
-      fof->next = q->slot[slot_idx];
-      q->slot[slot_idx] = fof;
+      for (;;)
+      {
+        fof_t** slot_p = &(q->slot[slot_idx]);
+	fof_t* slot = __atomic_load_n(slot_p, __ATOMIC_ACQUIRE);
+	uint64_t nf;
+	
+	fof->next = slot;
+
+	nf = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
+	if ( nf != next_frame)
+	{
+	  next_frame = nf;
+	  goto recalculate;
+	}
+	
+	/* here is the glitch where a fof can end up in the wrong slot. */
+	
+	if (__atomic_compare_exchange_n(slot_p, &slot, fof, false,
+				       __ATOMIC_RELEASE, __ATOMIC_RELAXED))
+        {
+	  break;
+	}
+      }
     }
     else
     {
-      /* If fail the fof is to late so there is no need to loop,
-       * but return with JFOFS_FOF_EXCESS_INFO status.
+      /* Case: add fof to the current slot (next to be consumed 
+       *   If fail the fof is to late so there is no need to loop,
+       *   but return with JFOFS_FOF_EXCESS_INFO status.
        */
       fof_t** slot_p = &(q->slot[slot_idx]);
       fof_t* slot = __atomic_load_n(slot_p, __ATOMIC_ACQUIRE);
+      uint64_t nf;
+      
       fof->next = slot;
-      next_frame_check = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
+      nf = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
 
-      if ( next_frame_check != next_frame)
+      if ( nf != next_frame)
+      {
+	fof_queue_free_fof(q, fof);
 	return JFOFS_FOF_LATE_WARNING;
+      }
    
       if (!__atomic_compare_exchange_n(slot_p, &slot, fof, false,
 				       __ATOMIC_RELEASE, __ATOMIC_RELAXED))
