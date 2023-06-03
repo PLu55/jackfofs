@@ -90,6 +90,7 @@ void test_api(void)
   setup.buffer_size = 256;
   setup.fofs_trace_level = 0;
 
+#if 0 
   cpid = fork();
   printf("cpid: %d\n", cpid);
   if ( cpid == 0)
@@ -101,7 +102,7 @@ void test_api(void)
   }
   
   fofs_sleep(100000);
-
+#endif
   jfofs = jfofs_new(&status);
   if (jfofs == NULL)
     exit(-1);
@@ -112,8 +113,7 @@ void test_api(void)
   signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
   signal_tester_client_activate(stc);
 
-  jack_connect(stc->j_client,
-	       jack_port_name("jfofs_mix:out_1"),
+  jack_connect(stc->j_client,"jfofs_mix:out_1",
 	       jack_port_name(stc->in_port));
     
   //TEST_ASSERT_TRUE(&(jfofs->q) == &(shmem->q));
