@@ -7,6 +7,7 @@
 
 #include "jfofs.h"
 #include "test_util.h"
+#include "config.h"
 
 static char doc[] =
   "jfofsstress is a program that put pressure on the jfofs server";
@@ -108,7 +109,10 @@ int main(int argc, char** argv)
   int status;
   fof_t fof;
   jfofs_time_t t;
-  jfofs_time_t dt;
+  uint64_t cnt = 0;
+  int tcnt = 0;
+  int s6_cnt = 0;
+  
   struct arguments arguments;
   
   arguments.verbose = 0;
@@ -118,7 +122,6 @@ int main(int argc, char** argv)
   arguments.latancy = 500; 
 
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
-
 
   atexit(exit_handler);
   setup_signal_handlers();
@@ -139,8 +142,25 @@ int main(int argc, char** argv)
     t = jfofs_get_time(jfofs) + arguments.latancy;
     status =  jfofs_add(jfofs, t, fof.argv);
     if (status != 0)
+    {
       printf("status: %d\n", status);
+      if (status == 6 && ++s6_cnt > 10)
+      {
+	printf("To many status 6, exiting now.");
+	exit(-1);
+      }
+    }
     sleep_us(arguments.sleep);
+    if (++cnt > 200UL)
+    {
+      cnt = 0;
+      printf(".");
+      fflush(stdout);
+      if (++tcnt > 60)
+      {
+	printf("\n");
+	tcnt = 0;
+      }
+    }
   }
-
 }

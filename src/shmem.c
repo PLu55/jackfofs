@@ -9,6 +9,7 @@
 #include "shmem.h"
 #include "fof_queue.h"
 #include "jfofs_private.h"
+#include "debug.h"
 
 size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off);
 
@@ -31,6 +32,7 @@ shmem_t* shmem_create(setup_t* setup, int* status)
   
   size = shmem_layout(setup, &slots_offset, &fofs_offset);
   ftruncate(fd, size);
+
  
   shmem = (shmem_t*) mmap(NULL, size , PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   close(fd);
@@ -40,6 +42,9 @@ shmem_t* shmem_create(setup_t* setup, int* status)
     *status = JFOFS_SHM_MAP_ERROR;
     return NULL;
   }
+  
+  DEFINE_FOF_LIMITS((char*)shmem + fofs_offset,
+		    (char*)shmem+fofs_offset + setup->n_max_fofs * sizeof(fof_t));
   
   printf("shmem base (server): %p size: %ld\n", shmem, size);
   shmem->base = shmem;
@@ -70,6 +75,8 @@ shmem_t* shmem_link(int* status)
   shmem_t* shmem;
   void* base;
   size_t size;
+  size_t slots_offset;
+  size_t fofs_offset;
   
   if ((fd = shm_open(SHMEM_NAME, O_RDWR, 0)) == -1)
   {  
@@ -95,6 +102,11 @@ shmem_t* shmem_link(int* status)
   shmem = (shmem_t*) mmap(base, size, PROT_READ | PROT_WRITE | MAP_FIXED,
   			MAP_SHARED, fd, 0);
   close(fd);
+
+  size = shmem_layout(&(shmem->setup), &slots_offset, &fofs_offset);
+  DEFINE_FOF_LIMITS((char*)shmem + fofs_offset,
+  	    (char*)shmem+fofs_offset + shmem->setup.n_max_fofs * sizeof(fof_t));
+  
   printf("shmem mapped to: %p\n", shmem); 
   if (shmem == MAP_FAILED || shmem != base)
   {

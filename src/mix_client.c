@@ -7,6 +7,7 @@
 #include "jfofs_private.h"
 #include "mix_client.h"
 #include "fof_queue.h"
+#include "debug.h"
 
 int mix_client_process (jack_nframes_t nframes, void *arg);
 
@@ -66,6 +67,8 @@ int mix_client_process (jack_nframes_t nframes, void *arg)
   jack_default_audio_sample_t *in_buf;
   jack_default_audio_sample_t *out_buf;
   fof_queue_t* q = mix->q;
+
+  ADD_CTRL_ENTRY_CNT(-1);
   
   //printf("n_chans: %d\n", mix->n_chans);
   for(int i = 0; i < mix->n_chans; i++)
@@ -77,6 +80,7 @@ int mix_client_process (jack_nframes_t nframes, void *arg)
     memcpy(out_buf, in_buf, nframes * sizeof(jack_default_audio_sample_t));
     //memset(out_buf, 0, nframes * sizeof(jack_default_audio_sample_t));
   }
+#if 0
   if (q->first_fof != NULL)
   {
     //printf("mix_client_process release fofs\n");
@@ -84,6 +88,7 @@ int mix_client_process (jack_nframes_t nframes, void *arg)
     q->first_fof = NULL;
     q->last_fof = NULL;
   }
+#endif
   //printf("mix_client_process <-----\n");
   return 0;
 }

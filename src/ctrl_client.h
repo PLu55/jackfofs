@@ -20,6 +20,7 @@ struct ctrl_client_s
   int n;
   int m;
   int syncronized;
+  int xruns;
   void* pad[1];
   mix_client_t* mix;
   dsp_client_t* dsp[MAX_DSP_CLIENTS];

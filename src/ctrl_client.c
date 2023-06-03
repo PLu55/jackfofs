@@ -6,11 +6,13 @@
 #include "fof_queue.h"
 #include "ctrl_client.h"
 #include "dsp_client.h"
+#include "debug.h"
 
 #include "test_util.h"
 #include <stdio.h>
 
 int ctrl_client_process(jack_nframes_t nframes, void *arg);
+int ctrl_client_xrun(void* arg);
 
 ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
 {
@@ -37,6 +39,7 @@ ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
   ctrl->n = 0;
   ctrl->m = 0;
   ctrl->syncronized = 0;
+  ctrl->xruns = 0;
   ctrl->j_client = jack_client_open(client_name, options, &jstatus,
 				    server_name);
   if (ctrl->j_client == NULL)
@@ -50,6 +53,8 @@ ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
   ctrl->port = jack_port_register(ctrl->j_client, "out",
 				  JACK_DEFAULT_AUDIO_TYPE,
 				  JackPortIsOutput, 0);
+  jack_set_xrun_callback(ctrl->j_client, ctrl_client_xrun,
+			     (void*) ctrl);
   return ctrl;
 }
 
@@ -94,6 +99,8 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
 
   if (ctrl->active == 0)
     return 0;
+
+  ADD_CTRL_ENTRY_CNT(1);
   
   /* TODO: fix atomic access, what memorder to use? */
   n = __atomic_fetch_add(&q->next_frame, nframes, __ATOMIC_RELEASE);
@@ -136,11 +143,31 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
     fof = fof->next;
   }
   ctrl->last_dsp = i;
+  if (q->first_fof != NULL)
+  {
+    //printf("mix_client_process release fofs\n");
+    fof_queue_free_fofs(q, q->first_fof, q->last_fof);
+    q->first_fof = NULL;
+    q->last_fof = NULL;
+  }
   /* the fofs are added to the free list by the mix_client, this
    * allows the dsp_clients to compute the fof data for the fofs 
    * library.
+   * The assumption is that ctrl and mix clients do not overlap
+   * but it seams like they do. 
    */ 
   return 0;      
 }
 
+int ctrl_client_xrun(void* arg)
+{
+  ctrl_client_t* ctrl = (ctrl_client_t*) arg;
 
+  if (++ctrl->xruns > 100)
+  {
+    fprintf(stderr, "Too many xruns: %d, exiting now\n", ctrl->xruns);
+    exit(-1);
+  }
+  return 0;
+}
+	

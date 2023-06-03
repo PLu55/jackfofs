@@ -8,6 +8,8 @@
 #include "jfofs_private.h"
 #include "jfofs_types.h"
 #include "fof_queue.h"
+#include "config.h"
+#include "debug.h"
 
 /* fof_queue is an implementation of a circular queue to handle
  * scheduling problems in audio processing.
@@ -71,11 +73,14 @@ fof_t* fof_queue_allocate_fof(fof_queue_t* q, int *status)
       *status = JFOFS_MEMORY_ERROR;
       return NULL;
     }
- 
+    
+    CHECK_FOF_ADDR(fof);
+    
     if (__atomic_compare_exchange_n(&(q->free_fofs), &fof, fof->next, false,
 				    __ATOMIC_RELEASE, __ATOMIC_RELAXED))
       break;
   }
+  
   fof->next = NULL;
   *status = JFOFS_SUCCESS;
   return fof;
@@ -83,6 +88,8 @@ fof_t* fof_queue_allocate_fof(fof_queue_t* q, int *status)
 
 void fof_queue_free_fof(fof_queue_t* q, fof_t* fof)
 {
+  CHECK_FOF_ADDR(fof);
+  
   for(;;)
   {
     fof->next = __atomic_load_n(&(q->free_fofs),  __ATOMIC_ACQUIRE);
@@ -103,6 +110,10 @@ void fof_queue_free_fofs(fof_queue_t* q, fof_t* head, fof_t* tail)
   fof = __atomic_load_n(&(q->free_fofs),  __ATOMIC_ACQUIRE);
   tail->next = fof;
   __atomic_store_n(&(q->free_fofs), head, __ATOMIC_RELEASE);
+  
+  CHECK_FOF_ADDR(fof);
+  CHECK_FOF_ADDR(head);
+  CHECK_FOF_ADDR(tail);
 }
 
 static inline void set_fof(fof_t* fof, uint64_t time_us, float* argv)
@@ -133,7 +144,7 @@ int fof_queue_add(fof_queue_t* q, uint64_t time_us, float* fof_argv)
 
   if (fof == NULL)
     return JFOFS_FOF_LIMIT_ERROR;
-
+  
   set_fof(fof, time_us, fof_argv);
   
   next_frame =__atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
@@ -186,27 +197,28 @@ recalculate:
     
     if (start_frame > next_frame + q->buffer_size)
     {
+      fof_t** slot_p = &(q->slot[slot_idx]);
+      
 #ifdef TRACE
       printf("fof inserted in fast lane\n");
 #endif
       for (;;)
       {
-        fof_t** slot_p = &(q->slot[slot_idx]);
-	fof_t* slot = __atomic_load_n(slot_p, __ATOMIC_ACQUIRE);
-	uint64_t nf;
-	
-	fof->next = slot;
+	fof->next = __atomic_load_n(slot_p, __ATOMIC_ACQUIRE);
 
-	nf = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
-	if ( nf != next_frame)
+	next_frame_check = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
+	if ( next_frame_check != next_frame)
 	{
-	  next_frame = nf;
+	  next_frame = next_frame_check;
 	  goto recalculate;
 	}
 	
-	/* here is the glitch where a fof can end up in the wrong slot. */
+	/* Here is the glitch where a fof can end up in the wrong slot. 
+	 * It happens when q->next_frame is changed between the access
+	 * above and the setting below.
+	 */
 	
-	if (__atomic_compare_exchange_n(slot_p, &slot, fof, false,
+	if (__atomic_compare_exchange_n(slot_p, &(fof->next), fof, false,
 				       __ATOMIC_RELEASE, __ATOMIC_RELAXED))
         {
 	  break;
@@ -215,18 +227,17 @@ recalculate:
     }
     else
     {
-      /* Case: add fof to the current slot (next to be consumed 
+      /* Case: add fof to the current slot (next to be consumed) 
        *   If fail the fof is to late so there is no need to loop,
        *   but return with JFOFS_FOF_EXCESS_INFO status.
        */
       fof_t** slot_p = &(q->slot[slot_idx]);
       fof_t* slot = __atomic_load_n(slot_p, __ATOMIC_ACQUIRE);
-      uint64_t nf;
       
       fof->next = slot;
-      nf = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
+      next_frame_check = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
 
-      if ( nf != next_frame)
+      if ( next_frame_check != next_frame)
       {
 	fof_queue_free_fof(q, fof);
 	return JFOFS_FOF_LATE_WARNING;

@@ -5,6 +5,8 @@ project (Jack_Fofs VERSION 4.0.1)
 set(CMAKE_C_FLAGS "-g -Wall")
 set(FOFSHOME /home/plu/Projects/fofs)
 
+option(DEBUG_ENABLE "Enable Trace" OFF)
+
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -12,9 +14,11 @@ set(LIB_SRCS
   shmem.c
   fof_queue.c
   api.c
+  debug.c
   shmem.h
   fof_queue.h
-  api.h)
+  api.h
+  debug.h)
 
 set(SRCS
   shmem.c
@@ -23,6 +27,7 @@ set(SRCS
   ctrl_client.c
   dsp_client.c
   mix_client.c
+  debug.c
 )
 
 set(HDRS
@@ -33,6 +38,7 @@ set(HDRS
   fof_queue.h
   ctrl_client.h
   dsp_client.h
+  debug.h
 )
 
 set(TEST_SRCS
