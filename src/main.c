@@ -13,14 +13,15 @@ static char doc[] =
   "jfofs is a jack client program that is a parallel fof synthesizer";
 
 static struct argp_option options[] = {
-  {"verbose",     'v', 0,            0, "Produce verbose output" },
-  {"mode",        'm', "mode",       0,
+  {"verbose",     'v', 0,       0, "Produce verbose output" },
+  {"mode",        'm', "mode",  0,
    "Fof mode: 1: mono, 2: stereo 3: quad: 4: ambiO1 5: ambi01D, default is 1" },
-  {"n_clients",   'n', "n",  0, "number of parallel clients, default is 1" },
+  {"n_clients",   'n', "n",     0, "number of parallel clients, default is 1" },
   {"n_fofs",      'p', "n",     0, "number of preallocated fofs in libfofs, default is 10240" },
-  {"n_slots",     's', "n",    0, "number of slots in circular queue, default is 32" },
-  {"n_max_fofs",  'q', "n", 0, "maximum number of fofs in queue, default is 1024" },
-  {"trace_level", 't', "trace",      0, "sets the trace level, default is 0" },    
+  {"n_slots",     's', "n",     0, "number of slots in circular queue, default is 32" },
+  {"n_max_fofs",  'q', "n",     0, "maximum number of fofs in queue, default is 1024" },
+  {"trace_level", 't', "trace", 0, "sets the trace level, default is 0"},
+  {"xrun_limit",  'x', "n",     0, "terminates the server if more xruns then the limit, 0 is no limit" },
   { 0 }
 };
 
@@ -33,7 +34,7 @@ struct arguments
   int n_slots;
   int n_max_fofs;
   int trace_level;
-
+  int xrun_limit;
 };
 
 static error_t
@@ -63,6 +64,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case 't':
       arguments->trace_level = atoi(arg);
+      break;
+    case 'x':
+      arguments->xrun_limit = atoi(arg);
       break;
 
 #if 0
@@ -137,6 +141,7 @@ int main (int argc, char **argv)
   arguments.n_max_fofs = 1024;
   arguments.n_slots = 32;
   arguments.trace_level = 0;
+  arguments.xrun_limit = 0;
   
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
 
@@ -146,6 +151,7 @@ int main (int argc, char **argv)
   setup.n_slots =  arguments.n_slots;
   setup.n_max_fofs = arguments.n_max_fofs;
   setup.fofs_trace_level = arguments.trace_level;
+  setup.xrun_limit = arguments.xrun_limit;
   
   mgr = manager_create(&setup, &status);
   

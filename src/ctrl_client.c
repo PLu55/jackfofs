@@ -40,6 +40,7 @@ ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
   ctrl->m = 0;
   ctrl->syncronized = 0;
   ctrl->xruns = 0;
+  ctrl->xrun_limit = setup->xrun_limit;
   ctrl->j_client = jack_client_open(client_name, options, &jstatus,
 				    server_name);
   if (ctrl->j_client == NULL)
@@ -163,7 +164,8 @@ int ctrl_client_xrun(void* arg)
 {
   ctrl_client_t* ctrl = (ctrl_client_t*) arg;
 
-  if (++ctrl->xruns > 100)
+  ctrl->xruns++;
+  if (ctrl->xrun_limit && ctrl->xruns > ctrl->xrun_limit)
   {
     fprintf(stderr, "Too many xruns: %d, exiting now\n", ctrl->xruns);
     exit(-1);

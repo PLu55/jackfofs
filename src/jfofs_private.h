@@ -39,6 +39,7 @@ struct setup_s
 			      * filled by manager to what jack has */
   int buffer_size;           /* number of samples (frames) in each cycle if zero
 			      * it's set by manager to what jack has */
+  int xrun_limit;            /* terminates the server if more xruns then the limit */
 };
 
 static inline jack_nframes_t jfofs_time_to_nframes(uint64_t t, int sample_rate)
