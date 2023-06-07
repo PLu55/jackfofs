@@ -13,10 +13,11 @@
 
 size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off);
 
+shmem_t* shmem;
+
 shmem_t* shmem_create(setup_t* setup, int* status)
 {
   int fd;
-  shmem_t* shmem;
   size_t slots_offset;
   size_t fofs_offset;
   size_t size;
@@ -54,7 +55,9 @@ shmem_t* shmem_create(setup_t* setup, int* status)
   
   /* not linked yet, linking is done in fof_queue_init */
   shmem->q.free_fofs =  (fof_t*)((char*)shmem + fofs_offset);
-				 
+
+  shmem->has_statistics = HAS_STATISTICS; 
+  STATISTICS_INIT;		 
   return shmem;
 }
 
@@ -72,7 +75,6 @@ void* shmem_get_fof_mem_ptr(shmem_t* shmem, setup_t* setup)
 shmem_t* shmem_link(int* status)
 {
   int fd;
-  shmem_t* shmem;
   void* base;
   size_t size;
   size_t slots_offset;
@@ -114,6 +116,11 @@ shmem_t* shmem_link(int* status)
     return NULL;
   }
 
+  return shmem;
+}
+
+shmem_t* shmem_ptr(void)
+{
   return shmem;
 }
 

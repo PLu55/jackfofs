@@ -9,5 +9,6 @@
 #define PROJECT_VER_PATCH "@PROJECT_VERSION_PATCH@"
 
 #cmakedefine DEBUG_ENABLE
+#cmakedefine STATISTICS_ENABLE
 
 #endif

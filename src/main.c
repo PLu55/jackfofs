@@ -97,6 +97,7 @@ static manager_t* mgr = NULL;
 
 static void exit_handler(int status)
 {
+  fprintf(stderr, "exit_handler!\n");
   if (mgr != NULL)
   {
     manager_deactivate_clients(mgr);
@@ -108,6 +109,36 @@ static void exit_handler(int status)
 
 static void termination_handler (int signum)
 {
+  fprintf(stderr, "Terminating!\n");
+#ifdef STATISTICS_ENABLE
+  
+  if (signum == SIGTSTP)
+  {
+    statistics_t* stats = &(mgr->shmem->statistics);
+    int sum = 0;
+    for (int i = 0; i < stats->n_slots; i++)
+      sum += stats->slot_cnt[i];
+    printf("Dumping statistics:\n");
+    printf("total: %d\n", sum +  stats->late_cnt + stats->excess_cnt);
+    printf("excluding late and excess: %d\n", sum);
+    printf("late: %d\n", stats->late_cnt );
+    printf("excess: %d\n", stats->excess_cnt );
+    for (int i = 0; i < stats->n_slots; i++)
+      printf("slot[%d]: %d\n", i + 1, stats->slot_cnt[i]);
+  }
+#endif
+  
+#ifdef DEBUG_ENABLE
+  if (signum == SIGTSTP)
+  {
+    int i = 0;
+    int cnt = 0;
+    i = check_free_list(mgr->q, &cnt, 1);
+    printf("Debug: free_list integrity check(zero is good): %d free count: %d\n",
+	      i, cnt);
+  }
+#endif
+
   exit_handler(1);
 }
 
@@ -124,15 +155,19 @@ int main (int argc, char **argv)
   sigemptyset(&new_action.sa_mask);
   new_action.sa_flags = 0;
 
-  sigaction (SIGINT, NULL, &old_action);
+  /* ^\ generats a core dump */
+  sigaction (SIGINT, NULL, &old_action);      /* ^C */
   if (old_action.sa_handler != SIG_IGN)
     sigaction (SIGINT, &new_action, NULL);
-  sigaction (SIGHUP, NULL, &old_action);
-  if (old_action.sa_handler != SIG_IGN)
+  sigaction (SIGHUP, NULL, &old_action);       
+  if (old_action.sa_handler != SIG_IGN)       /* doen't work */
     sigaction (SIGHUP, &new_action, NULL);
   sigaction (SIGTERM, NULL, &old_action);
   if (old_action.sa_handler != SIG_IGN)
     sigaction (SIGTERM, &new_action, NULL);
+  sigaction (SIGTSTP, NULL, &old_action);     
+  if (old_action.sa_handler != SIG_IGN)
+    sigaction (SIGTSTP, &new_action, NULL);   /* ^Z */
 
   arguments.verbose = 0;
   arguments.mode = 1;
@@ -160,7 +195,8 @@ int main (int argc, char **argv)
     printf("Couldn't start the jfofs manager, status: %d!\n", status);
     exit_handler(status);
   }
-
+  printf("mgr: %p\n", mgr );
+  printf("shmem: %p\n", mgr->shmem );
   sleep(-1);
     
   exit_handler(0);

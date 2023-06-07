@@ -13,8 +13,10 @@
 #include "jfofs_private.h"
 #include "api.h"
 #include "shmem.h"
-
+#include "statistics.h"
 #include "test_util.h"
+
+/* TODO: Implement a check if statistics is included in shmem or not */
 
 jfofs_t* jfofs_new(int* status)
 {
@@ -53,7 +55,7 @@ jfofs_t* jfofs_new(int* status)
     }
     return NULL;
   }
-  
+
   *status = JFOFS_SUCCESS;
   return jfofs;
 }
@@ -94,4 +96,23 @@ jfofs_time_t jfofs_get_time(jfofs_t* jfofs)
 int jfofs_sample_rate(jfofs_t* jfofs)
 {
   return jfofs->shmem->q.sample_rate;
+}
+
+setup_t* jfofs_get_setup(jfofs_t* jfofs)
+{
+  return &(jfofs->shmem->setup);
+}
+
+void* jfofs_get_statistics(jfofs_t* jfofs)
+{
+#ifdef STATISTICS_ENABLE
+  if (jfofs->shmem->has_statistics)
+    return &(jfofs->shmem->statistics);
+  else
+    fprintf(stderr, "jfofs_get_statistics: statistics is not enabled in server\n");
+    return NULL;
+#else
+  fprintf(stderr, "jfofs_get_statistics: statistics is not enabled\n");
+  return NULL;
+#endif
 }

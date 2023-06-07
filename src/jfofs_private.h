@@ -10,6 +10,7 @@
 #define CACHE_LINE_SIZE 64UL
 #define MAX_CHANNELS 8
 #define MAX_DSP_CLIENTS 8
+#define MAX_SLOTS 128
 #define SHMEM_NAME "jfofs_shm"
 
 typedef struct ctrl_client_s ctrl_client_t;

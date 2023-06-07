@@ -26,7 +26,7 @@ manager_t* manager_create(setup_t* setup, int *status)
   shmem_t* shmem;
   
   shmem = shmem_create(setup, status);
-  if (shmem == 0)
+  if (shmem == NULL)
   {
     return NULL;
   }
@@ -68,11 +68,12 @@ manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status)
   {
     return NULL;
   }
-  mgr->shmem = shmem;
+
   memset((char*) mgr, 0, sizeof(manager_t));
   memcpy((char*) &(mgr->setup), (char*) setup, sizeof(setup_t));
-  mgr->q = &(shmem->q);
 
+  mgr->shmem = shmem;
+  mgr->q = &(shmem->q);
   mgr->ctrl = ctrl_client_new(setup, mgr->q, status);
   mgr->mix = mix_client_new(fof_ModeToChannels(setup->mode), mgr->q, status);
   mgr->mix->q = mgr->q;

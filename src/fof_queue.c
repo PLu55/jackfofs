@@ -10,6 +10,7 @@
 #include "fof_queue.h"
 #include "config.h"
 #include "debug.h"
+#include "statistics.h"
 
 /* fof_queue is an implementation of a circular queue to handle
  * scheduling problems in audio processing.
@@ -23,7 +24,7 @@
  * samples.
  * 
  */
-
+  
 void fof_queue_init(fof_queue_t* q, setup_t *setup)
 {
   fof_t* fof;
@@ -32,6 +33,11 @@ void fof_queue_init(fof_queue_t* q, setup_t *setup)
   q->next_frame_check = 0;
   q->current_slot = 0;
   q->n_slots = setup->n_slots;
+  
+#ifdef DEBUG_ENABLE
+  q->max_fofs = setup->n_max_fofs;
+  q->free_cnt = setup->n_max_fofs;
+#endif
 
   q->sample_rate = setup->sample_rate;
   q->buffer_size = setup->buffer_size;
@@ -81,6 +87,7 @@ fof_t* fof_queue_allocate_fof(fof_queue_t* q, int *status)
       break;
   }
   
+  DEBUG(q->free_cnt--);
   fof->next = NULL;
   *status = JFOFS_SUCCESS;
   return fof;
@@ -89,7 +96,7 @@ fof_t* fof_queue_allocate_fof(fof_queue_t* q, int *status)
 void fof_queue_free_fof(fof_queue_t* q, fof_t* fof)
 {
   CHECK_FOF_ADDR(fof);
-  
+  DEBUG(q->free_cnt++);
   for(;;)
   {
     fof->next = __atomic_load_n(&(q->free_fofs),  __ATOMIC_ACQUIRE);
@@ -100,18 +107,32 @@ void fof_queue_free_fof(fof_queue_t* q, fof_t* fof)
   }
 }
 
-/* fof_queue_free_fofs is called by a thread with high priority
- * so there will be no data race.
- */
 void fof_queue_free_fofs(fof_queue_t* q, fof_t* head, fof_t* tail)
 {
   fof_t* fof;
-
-  fof = __atomic_load_n(&(q->free_fofs),  __ATOMIC_ACQUIRE);
-  tail->next = fof;
-  __atomic_store_n(&(q->free_fofs), head, __ATOMIC_RELEASE);
   
-  CHECK_FOF_ADDR(fof);
+#ifdef DEBUG_ENABLE
+  fof = head;
+  while (fof)
+  {
+    q->free_cnt++;
+    if (fof == tail)
+      break;
+    fof = fof->next;
+  }
+  if (fof != tail)
+    fprintf(stderr, "Debug: fof_queue_free_fofs, inconsistant call!\n");
+#endif
+  for(;;)
+  {
+    fof = __atomic_load_n(&(q->free_fofs),  __ATOMIC_ACQUIRE);
+    tail->next = fof;
+    /* __atomic_store_n(&(q->free_fofs), head, __ATOMIC_RELEASE); */
+    if (__atomic_compare_exchange_n(&(q->free_fofs), &(tail->next), head, false,
+				__ATOMIC_RELEASE, __ATOMIC_RELAXED))
+      break;
+  }
+  CHECK_FOF_ADDR_OR_ZERO(fof);
   CHECK_FOF_ADDR(head);
   CHECK_FOF_ADDR(tail);
 }
@@ -130,6 +151,7 @@ int fof_queue_add(fof_queue_t* q, uint64_t time_us, float* fof_argv)
   uint64_t next_frame;
   uint64_t next_frame_check;
   int slot_idx;
+  int slot;
 
   /* TODO: release fof on faliure */
 
@@ -156,7 +178,11 @@ recalculate:
   printf("slot_idx: %d\n", slot_idx);
 #endif
   if (slot_idx < 0)
+  {
+    INCR_LATE_CNT();
+    fof_queue_free_fof(q, fof);
     return JFOFS_FOF_LATE_WARNING;
+  }
 
   /* TODO: implement excess handling. */
   /* Case excess */
@@ -165,6 +191,7 @@ recalculate:
 #ifdef TRACE
     printf("fof inserted in excess slot\n");
 #endif
+    INCR_EXCESS_CNT();
     fof->next = q->excess;
     q->excess = fof;
     return JFOFS_FOF_EXCESS_INFO;
@@ -181,10 +208,10 @@ recalculate:
       q->next_frame_check = next_frame;
     }
     
-    slot_idx =  (slot_idx + q->current_slot) & (q->n_slots - 1);
+    slot =  (slot_idx + q->current_slot) & (q->n_slots - 1);
 #ifdef TRACE
     printf("q->current_slot: %ld\n", q->current_slot);
-    printf("fof inserted in slot: %d\n", slot_idx);
+    printf("fof inserted in slot: %d\n", slot);
 #endif
     
     /* Case: add fof to a slot that is not the current slot
@@ -197,7 +224,7 @@ recalculate:
     
     if (start_frame > next_frame + q->buffer_size)
     {
-      fof_t** slot_p = &(q->slot[slot_idx]);
+      fof_t** slot_p = &(q->slot[slot]);
       
 #ifdef TRACE
       printf("fof inserted in fast lane\n");
@@ -224,6 +251,7 @@ recalculate:
 	  break;
 	}
       }
+      INCR_SLOT_CNT(slot_idx);
     }
     else
     {
@@ -231,7 +259,7 @@ recalculate:
        *   If fail the fof is to late so there is no need to loop,
        *   but return with JFOFS_FOF_EXCESS_INFO status.
        */
-      fof_t** slot_p = &(q->slot[slot_idx]);
+      fof_t** slot_p = &(q->slot[slot]);
       fof_t* slot = __atomic_load_n(slot_p, __ATOMIC_ACQUIRE);
       
       fof->next = slot;
@@ -240,6 +268,7 @@ recalculate:
       if ( next_frame_check != next_frame)
       {
 	fof_queue_free_fof(q, fof);
+	INCR_LATE_CNT();
 	return JFOFS_FOF_LATE_WARNING;
       }
    
@@ -247,15 +276,17 @@ recalculate:
 				       __ATOMIC_RELEASE, __ATOMIC_RELAXED))
       {
 	fof_queue_free_fof(q, fof);
+	INCR_LATE_CNT();
 	return JFOFS_FOF_LATE_WARNING;
       }
+      INCR_SLOT_CNT(slot_idx);
     }
   }
   return JFOFS_SUCCESS;
 }
 
-fof_t* fof_queue_take_slot(fof_queue_t* q, int slot_idx)
+fof_t* fof_queue_take_slot(fof_queue_t* q, int slot)
 {
-  return __atomic_exchange_n(&(q->slot[slot_idx]), NULL, __ATOMIC_RELEASE);
+  return __atomic_exchange_n(&(q->slot[slot]), NULL, __ATOMIC_RELEASE);
 }
 

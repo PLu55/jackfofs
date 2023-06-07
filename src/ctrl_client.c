@@ -101,6 +101,11 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
   if (ctrl->active == 0)
     return 0;
 
+#ifdef DEBUG_ENABLE
+  if (debug_info.ctrl_entry_cnt != 0)
+    fprintf(stderr, "Debug: ctrl_client_process, entry count not zero: %d!\n", debug_info.ctrl_entry_cnt);
+#endif
+
   ADD_CTRL_ENTRY_CNT(1);
   
   /* TODO: fix atomic access, what memorder to use? */
@@ -134,6 +139,7 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
   /* TODO: check the implementation of fof */
   i = ctrl->last_dsp;
   q->first_fof = fof;
+  q->active_cnt = 0;
   while (fof)
   {
     /* round robin, distribute the work over available dsp_clients */
@@ -142,21 +148,40 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
     dsp_client_add(dsp, fof);
     q->last_fof = fof;
     fof = fof->next;
+    q->active_cnt++;
   }
   ctrl->last_dsp = i;
   if (q->first_fof != NULL)
   {
     //printf("mix_client_process release fofs\n");
     fof_queue_free_fofs(q, q->first_fof, q->last_fof);
+    
+#ifdef xxx//DEBUG_ENABLE
+    fprintf(stderr, "Debug: free: %d active: %d sum: %d\n", q->free_cnt, q->active_cnt, q->free_cnt + q->active_cnt);
+    //if (q->free_cnt != q->max_fofs - q->active_cnt)
+    //  fprintf(stderr, "Debug: Memory leak in ctrl_client_process detected!\n");
+#endif
+    
     q->first_fof = NULL;
     q->last_fof = NULL;
+    
+#ifdef DEBUG_ENABLE
+    int i = 0;
+    int cnt = 0;
+    i = check_free_list(q, &cnt, 1);
+    if (i != 0)
+      printf("Debug: free_list integrity check(zero is good): %d free count: %d\n",
+	     i, cnt);
+#endif
+    
   }
   /* the fofs are added to the free list by the mix_client, this
    * allows the dsp_clients to compute the fof data for the fofs 
    * library.
    * The assumption is that ctrl and mix clients do not overlap
    * but it seams like they do. 
-   */ 
+   */
+  ADD_CTRL_ENTRY_CNT(-1);
   return 0;      
 }
 
@@ -165,10 +190,10 @@ int ctrl_client_xrun(void* arg)
   ctrl_client_t* ctrl = (ctrl_client_t*) arg;
 
   ctrl->xruns++;
-  if (ctrl->xrun_limit && ctrl->xruns > ctrl->xrun_limit)
+  if (ctrl->xrun_limit && ctrl->xruns >= ctrl->xrun_limit)
   {
-    fprintf(stderr, "Too many xruns: %d, exiting now\n", ctrl->xruns);
-    exit(-1);
+    fprintf(stderr, "jfofs: Too many xruns: %d, aborting the process!\n", ctrl->xruns);
+    abort();
   }
   return 0;
 }

@@ -3,6 +3,8 @@
 
 #include "fof_queue.h"
 #include "manager.h"
+#include "config.h"
+#include "statistics.h"
 
 /* memory layout:
 
@@ -29,6 +31,8 @@ struct shmem_s
   shmem_t* base;
   size_t size;
   setup_t setup;
+  int has_statistics;
+  STATISTICS_T(statistics);
   fof_queue_t q;
 };
 
@@ -39,5 +43,6 @@ void shmem_unlink(shmem_t* shmem);
 void shmem_unmap(shmem_t* shmem);
 char* shmem_aligning_ptr(char* ptr, size_t alignment_size);
 size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off);
+shmem_t* shmem_ptr(void);
 
 #endif

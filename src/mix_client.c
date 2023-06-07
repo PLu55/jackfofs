@@ -68,8 +68,6 @@ int mix_client_process (jack_nframes_t nframes, void *arg)
   jack_default_audio_sample_t *out_buf;
   fof_queue_t* q = mix->q;
 
-  ADD_CTRL_ENTRY_CNT(-1);
-  
   //printf("n_chans: %d\n", mix->n_chans);
   for(int i = 0; i < mix->n_chans; i++)
   {

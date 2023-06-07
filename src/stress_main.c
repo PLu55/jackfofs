@@ -137,6 +137,11 @@ int main(int argc, char** argv)
   fof.argv[FOF_ARG_beta] = arguments.bdur;
   fof.argv[FOF_ARG_alpha] = fof_t60_to_alpha(arguments.adur);
 
+  printf("adur: %5.3f\n", arguments.adur);
+  printf("bdur: %5.3f\n", arguments.bdur);
+  printf("sleep: %dµs\n", arguments.sleep);
+  printf("latancy: %dµs\n", arguments.latancy);
+
   for (;;)
   {
     t = jfofs_get_time(jfofs) + arguments.latancy;
