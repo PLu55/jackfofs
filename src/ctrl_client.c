@@ -139,7 +139,7 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
   /* TODO: check the implementation of fof */
   i = ctrl->last_dsp;
   q->first_fof = fof;
-  q->active_cnt = 0;
+  DEBUG(q->active_cnt = 0);
   while (fof)
   {
     /* round robin, distribute the work over available dsp_clients */
@@ -148,7 +148,7 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
     dsp_client_add(dsp, fof);
     q->last_fof = fof;
     fof = fof->next;
-    q->active_cnt++;
+    DEBUG(q->active_cnt++);
   }
   ctrl->last_dsp = i;
   if (q->first_fof != NULL)
