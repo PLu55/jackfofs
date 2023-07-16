@@ -27,7 +27,6 @@ void incr_excess_cnt();
 #define INCR_SLOT_CNT(slot) incr_slot_cnt(slot)
 #define INCR_LATE_CNT() incr_late_cnt()
 #define INCR_EXCESS_CNT() incr_excess_cnt()
-#define STATISTICS_INIT statistics_init()
  
 #else
 

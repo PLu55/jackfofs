@@ -68,6 +68,21 @@ void fofs_sleep(jfofs_time_t t)
   nanosleep(&ts, &tr);
 }
 
+void dump_statistic(jfofs_t* jfofs)
+{
+  statistics_t* stats = &(jfofs->shmem->statistics);
+  int sum = 0;
+  for (int i = 0; i < stats->n_slots; i++)
+    sum += stats->slot_cnt[i];
+  printf("Dumping statistics:\n");
+  printf("total: %d\n", sum +  stats->late_cnt + stats->excess_cnt);
+  printf("excluding late and excess: %d\n", sum);
+  printf("late: %d\n", stats->late_cnt );
+  printf("excess: %d\n", stats->excess_cnt );
+  for (int i = 0; i < stats->n_slots; i++)
+    printf("slot[%d]: %d\n", i + 1, stats->slot_cnt[i]);
+}
+
 void test_api(void)
 {
   jfofs_t* jfofs;
@@ -103,6 +118,7 @@ void test_api(void)
   
   fofs_sleep(100000);
 #endif
+  
   jfofs = jfofs_new(&status);
   if (jfofs == NULL)
     exit(-1);
@@ -112,6 +128,8 @@ void test_api(void)
   stc = signal_tester_client_new(&status);
   signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
   signal_tester_client_activate(stc);
+  
+  dump_statistic(jfofs);
 
   jack_connect(stc->j_client,"jfofs_mix:out_1",
 	       jack_port_name(stc->in_port));
@@ -154,8 +172,10 @@ void test_api(void)
   }
   signal_tester_client_deactivate(stc);
   printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
+  dump_statistic(jfofs);
 
-  printf("kill(%d): %d\n", cpid, kill(cpid, SIGTERM));
+  if (cpid)
+    printf("kill(%d): %d\n", cpid, kill(cpid, SIGTERM));
   exit(0);
   
 #if 0
