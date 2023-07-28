@@ -78,9 +78,9 @@ manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status)
   mgr->mix = mix_client_new(fof_ModeToChannels(setup->mode), mgr->q, status);
   mgr->mix->q = mgr->q;
   
-  if (setup->sample_rate == 0)
+  //if (setup->sample_rate == 0)
     setup->sample_rate = jack_get_sample_rate(mgr->ctrl->j_client);
-  if (setup->buffer_size == 0)
+    //if (setup->buffer_size == 0)
     setup->buffer_size = jack_get_buffer_size(mgr->ctrl->j_client);
 
   fof_queue_init(mgr->q, setup);

@@ -14,10 +14,10 @@ static char doc[] =
 
 static struct argp_option options[] = {
   {"verbose",     'v', 0,            0, "Produce verbose output" },
-  {"adur",        'a', "f",          0, "duration (alpha) of a single fof in s, "}, 
-  {"bdur",        'b', "f",          0, "duration of the attack (beta) of a single fof in s, "}, 
-  {"sleep",       's', "t",          0, "time between fofs in µs"}, 
-  {"latancy",     'l', "l",          0, "how far ahead the fofs are added in µs"}, 
+  {"adur",        'a', "f",          0, "duration (alpha) of a single fof in s, [0.01]"}, 
+  {"bdur",        'b', "f",          0, "duration of the attack (beta) of a single fof in s, [0.001]"}, 
+  {"sleep",       's', "t",          0, "time between fofs in µs, [2000]"}, 
+  {"latancy",     'l', "l",          0, "how far ahead the fofs are added in µs, [500]"}, 
   { 0 }
 };
 

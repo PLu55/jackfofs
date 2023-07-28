@@ -69,6 +69,22 @@ void fofs_sleep(jfofs_time_t t)
   nanosleep(&ts, &tr);
 }
 
+void dump_setup(jfofs_t* jfofs)
+{
+  setup_t* shm_setup  = jfofs_get_setup(jfofs);
+
+  printf("Dumping setup:\n");
+  printf("  mode: %d\n", shm_setup->mode);
+  printf("  trace_level: %d\n", shm_setup->fofs_trace_level);
+  printf("  n_clients: %d\n", shm_setup->n_clients);
+  printf("  n_preallocate: %d\n", shm_setup->n_preallocate_fofs);
+  printf("  n_max_fofs: %d\n",  shm_setup->n_max_fofs);
+  printf("  n_slots: %d\n",  shm_setup->n_slots);
+  printf("  sample_rate: %d\n", shm_setup->sample_rate);
+  printf("  buffer_size: %d\n", shm_setup->buffer_size);
+  printf("  xrun_limit: %d\n", shm_setup->xrun_limit);
+}
+
 void dump_statistic(jfofs_t* jfofs)
 {
   
@@ -96,6 +112,7 @@ void test_api(void)
   fof_t fof;
   shmem_t* shmem;
   setup_t setup;
+  setup_t* shm_setup;
   struct timespec ts;
   struct timespec tr;
   
@@ -130,6 +147,15 @@ void test_api(void)
     exit(-1);
   TEST_ASSERT_NOT_NULL(jfofs);
   TEST_ASSERT_NOT_NULL_MESSAGE(jfofs->shmem, "shared memory not linked");
+
+  //setup.sample_rate = jfofs_sample_rate(jfofs);
+  printf("Sample rate: %d\n", setup.sample_rate);
+  shm_setup = jfofs_get_setup(jfofs);
+  TEST_ASSERT_NOT_NULL(shm_setup);
+  printf("shm_setup: %p\n", shm_setup);
+  printf("Sample rate: %d\n", shm_setup->sample_rate);
+  dump_setup(jfofs);
+  
 
   stc = signal_tester_client_new(&status);
   signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));

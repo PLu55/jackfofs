@@ -19,7 +19,7 @@ void test_manager(void)
 {
   signal_tester_client_t* stc;
   int status;
-  jack_nframes_t sample_rate;
+  //jack_nframes_t sample_rate;
   setup_t setup;
 
   setup.mode = FOF_MONO;
@@ -36,10 +36,10 @@ void test_manager(void)
   stc = signal_tester_client_new(&status);
   TEST_ASSERT_NOT_NULL(stc);
   signal_tester_client_activate(stc);
-  sample_rate = jack_get_sample_rate(stc->j_client);
-  signal_tester_client_set_nframes(stc, (uint64_t)(sample_rate * 1.1));
+  setup.sample_rate = jack_get_sample_rate(stc->j_client);
+  signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
 
-  test_manager_with_setup(&setup, 4000, stc);
+  test_manager_with_setup(&setup, 100, stc);
   
   printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
 

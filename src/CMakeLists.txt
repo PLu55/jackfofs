@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.24)
 
 project (Jack_Fofs VERSION 4.0.1)
 
-set(CMAKE_C_FLAGS "-g -Wall")
+set(CMAKE_C_FLAGS "-g -O0 -Wall")
 set(FOFSHOME /home/plu/Projects/fofs)
 
 option(DEBUG_ENABLE "Enable Debug" OFF)
