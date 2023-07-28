@@ -7,6 +7,7 @@
 #include <signal.h>
 
 #include "jfofs.h"
+#include "config.h"
 //#include "manager_dummy.h"
 #include "signal_tester_client.h"
 #include "test_util.h"
@@ -70,6 +71,8 @@ void fofs_sleep(jfofs_time_t t)
 
 void dump_statistic(jfofs_t* jfofs)
 {
+  
+#ifdef STATISTICS_ENABLE
   statistics_t* stats = &(jfofs->shmem->statistics);
   int sum = 0;
   for (int i = 0; i < stats->n_slots; i++)
@@ -81,6 +84,9 @@ void dump_statistic(jfofs_t* jfofs)
   printf("excess: %d\n", stats->excess_cnt );
   for (int i = 0; i < stats->n_slots; i++)
     printf("slot[%d]: %d\n", i + 1, stats->slot_cnt[i]);
+#else
+  printf("statistics is not enabled, \n");
+#endif
 }
 
 void test_api(void)
