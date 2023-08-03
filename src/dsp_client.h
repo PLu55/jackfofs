@@ -26,7 +26,7 @@ static inline int dsp_client_add(dsp_client_t* dsp, fof_t* fof)
   return fof_add_v(dsp->fof_bank, fof->time_us, fof->argv);
 }
 
-dsp_client_t* dsp_client_new(setup_t* _setup, int* status);
+dsp_client_t* dsp_client_new(setup_t* _setup, int index, int* status);
 int dsp_client_add(dsp_client_t* dsp, fof_t* fof);
 int dsp_client_activate(dsp_client_t* dsp);
 int dsp_client_deactivate(dsp_client_t* dsp);

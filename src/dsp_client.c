@@ -9,15 +9,18 @@
 
 int dsp_client_process (jack_nframes_t nframes, void *arg);
 
-dsp_client_t* dsp_client_new(setup_t* setup, int* status)
+dsp_client_t* dsp_client_new(setup_t* setup, int idx, int* status)
 {
   dsp_client_t* dsp;
-  const char *client_name = "jfofs_dsp";
+  const char *client_name_base = "jfofs_dsp";
+  char client_name[64];
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
   jack_status_t jstatus;
   jack_nframes_t sample_rate;
   jack_nframes_t buffer_size;
+
+  sprintf( client_name, "%s%02d", client_name_base, idx + 1);
 
   *status = posix_memalign((void**) &dsp, CACHE_LINE_SIZE, sizeof(dsp_client_t));
   if (dsp == NULL)

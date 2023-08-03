@@ -45,18 +45,20 @@ void test_ctrl_client(void)
   size_t size; 
   size = shmem_layout(&setup, &slots_off, &fofs_off);
   printf("shmem: %p - %p\n", shmem, (char*)shmem + size);
-  
-  q = &(shmem->q);
-  fof_queue_init(q, &setup);
 
+  q = &(shmem->q);
   ctrl = ctrl_client_new(&setup, q, &status);
   TEST_ASSERT_NOT_NULL(ctrl);
   TEST_ASSERT_NOT_NULL(ctrl->q);
 
   sample_rate = jack_get_sample_rate(ctrl->j_client);
   buffer_size = jack_get_buffer_size(ctrl->j_client);
+  setup.sample_rate = sample_rate;
+  setup.buffer_size = buffer_size;
 
-  ctrl->dsp[0] = dsp_client_new(&setup, &status);
+  fof_queue_init(q, &setup);
+
+  ctrl->dsp[0] = dsp_client_new(&setup, 0, &status);
   TEST_ASSERT_NOT_NULL(ctrl->dsp);
   
   t0 = jack_frame_time(ctrl->j_client);
@@ -64,11 +66,13 @@ void test_ctrl_client(void)
   // Run empty for 2 sec.
   ctrl_client_activate(ctrl);
   TEST_ASSERT_EQUAL_UINT64(0, ctrl->q->next_frame);
+  usleep(100);
   n = jack_frame_time(ctrl->j_client);
-  sleep(2);
+  usleep(2000000 - 100);
   m = jack_frame_time(ctrl->j_client);
-  TEST_ASSERT_INT_WITHIN(128, 96000, m - n);
-  TEST_ASSERT_INT_WITHIN(128, 96000, ctrl->q->next_frame);
+  TEST_ASSERT_INT_WITHIN(500, 96000, m - n);
+  n = (2 * sample_rate / buffer_size + 1) * buffer_size;
+  TEST_ASSERT_INT_WITHIN(500, n, ctrl->q->next_frame);
 
   // Add a fof
   n = (jack_frame_time(ctrl->j_client) - t0 + 64) * 1000000ULL / sample_rate;

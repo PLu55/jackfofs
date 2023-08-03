@@ -108,11 +108,14 @@ void* jfofs_get_statistics(jfofs_t* jfofs)
 #ifdef STATISTICS_ENABLE
   if (jfofs->shmem->has_statistics)
     return &(jfofs->shmem->statistics);
-  else
-    fprintf(stderr, "jfofs_get_statistics: statistics is not enabled in server\n");
+  else {
+    fprintf(stderr,
+	    "jfofs_get_statistics: statistics is not enabled in server\n");
     return NULL;
+  }
 #else
-  fprintf(stderr, "jfofs_get_statistics: statistics is not enabled\n");
+  fprintf(stderr,
+	  "jfofs_get_statistics: statistics is not enabled in server\n");
   return NULL;
 #endif
 }

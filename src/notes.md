@@ -84,3 +84,9 @@ different virtual address.
 One strategy to handle pointers in shared memory is to try to use it's
 first argument of mmap to map the adress to the same in all involved
 processes. The'normal pointers can be used in the shared memory.
+
+## Running under PipeWire
+
+Delay of the effect of jack commands take longer then running directly
+under jack. The consequences are that delays has to be entered in
+testing procedures.

@@ -16,10 +16,10 @@ struct setup_s
   int n_preallocate_fofs;    /* number of pre allocated fofs in each client */
   int n_max_fofs;            /* maximum number of fofs */
   int n_slots;               /* number of slots in circular fof buffer */
-  int sample_rate;           /* sample (frames) per second, if zero it's 
+  int sample_rate;           /* sample (frames) per second,
 			      * filled by manager to what jack has */
-  int buffer_size;           /* number of samples (frames) in each cycle if zero
-			      * it's set by manager to what jack has */
+  int buffer_size;           /* number of samples (frames) in each cycle,
+			      * set by manager to what jack has */
   int xrun_limit;            /* terminates the server if more xruns then the limit */
 };
 

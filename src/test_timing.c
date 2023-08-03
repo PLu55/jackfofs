@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <time.h>
 #include <jack/jack.h>
 
@@ -70,8 +71,7 @@ int main (int argc, char **argv)
   //long tv_nsec;
   uint64_t t1_0, t2_0, t3_0, t4_0, t5_0;
   uint64_t t1, t2, t3, t4, t5, tdiff, tdl;
-  double mu;
-  double t4_mu = 0.0;
+  double t4_mu;
   uint64_t sample_rate;
   
   jfofs_t* jfofs = jfofs_new(&status);  
@@ -104,7 +104,7 @@ int main (int argc, char **argv)
 
   t5_0 = jack_time_from_frames(jc, 48000);
 
-  double diff = (double)( (int64_t)t5_0 - (int64_t)t4_0);
+  double diff;
   int i = 0;
   for (;;)
   {

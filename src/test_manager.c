@@ -37,6 +37,7 @@ void test_manager(void)
   TEST_ASSERT_NOT_NULL(stc);
   signal_tester_client_activate(stc);
   setup.sample_rate = jack_get_sample_rate(stc->j_client);
+  setup.buffer_size = jack_get_buffer_size(stc->j_client);
   signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
 
   test_manager_with_setup(&setup, 100, stc);
@@ -60,7 +61,10 @@ void test_manager_with_setup(setup_t* setup, int n_fofs, signal_tester_client_t*
   n_chans = fof_ModeToChannels(setup->mode);
   mgr = manager_create(setup, &status);
 
-  //sprintf(msg, "status: %d", status);
+  sprintf(msg, "status: %d", status);
+  printf( "status: %s\n", strerror(status));
+  perror("hepp");
+  //char *strerror(17);
   TEST_ASSERT_NOT_NULL(mgr);
   TEST_ASSERT_NOT_NULL_MESSAGE(mgr, msg);
   TEST_ASSERT_NOT_NULL(mgr->ctrl);
@@ -71,7 +75,8 @@ void test_manager_with_setup(setup_t* setup, int n_fofs, signal_tester_client_t*
     TEST_ASSERT_NOT_NULL(mgr->ctrl->dsp[i]);
   }
   TEST_ASSERT_NOT_NULL(mgr->mix);
- 
+
+  sleep(3);
   for (int i = 0; i < setup->n_clients; i++)
   {
     TEST_ASSERT_TRUE(jack_port_connected_to(mgr->ctrl->port,

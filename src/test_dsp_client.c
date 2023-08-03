@@ -25,7 +25,7 @@ void test_dsp_client(void)
   setup.buffer_size = 256;
 
   TEST_ASSERT_EQUAL_INT(0, sizeof(dsp_client_t) % CACHE_LINE_SIZE);
-  dsp = dsp_client_new(&setup, &status);
+  dsp = dsp_client_new(&setup, 0, &status);
   TEST_ASSERT_NOT_NULL(dsp);
   TEST_ASSERT_NOT_NULL(dsp->j_client);
   TEST_ASSERT_EQUAL_INT(1, dsp->n_chans);
@@ -44,7 +44,7 @@ void test_dsp_client(void)
   jack_connect(dsp->j_client,
 	       jack_port_name(dsp->out_port[0]),
 	       jack_port_name(stc->in_port));
-
+  sleep(1);
   TEST_ASSERT_TRUE(jack_port_connected_to(dsp->out_port[0],
 					  jack_port_name(stc->in_port)));
 
