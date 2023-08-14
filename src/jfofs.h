@@ -30,5 +30,6 @@ jfofs_time_t jfofs_get_time(jfofs_t* jfofs);
 int jfofs_sample_rate(jfofs_t* jfofs);
 void* jfofs_get_statistics(jfofs_t* jfofs);
 setup_t* jfofs_get_setup(jfofs_t* jfofs);
+int jfofs_get_reference_cnt(jfofs_t* jfofs);
 
 #endif

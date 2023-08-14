@@ -155,8 +155,9 @@ void test_api(void)
   printf("shm_setup: %p\n", shm_setup);
   printf("Sample rate: %d\n", shm_setup->sample_rate);
   dump_setup(jfofs);
+  printf("Reference_cnt: %d\n", jfofs->shmem->reference_cnt);
+  TEST_ASSERT_EQUAL_INT(1, jfofs->shmem->reference_cnt);
   
-
   stc = signal_tester_client_new(&status);
   signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
   signal_tester_client_activate(stc);
@@ -208,6 +209,10 @@ void test_api(void)
 
   if (cpid)
     printf("kill(%d): %d\n", cpid, kill(cpid, SIGTERM));
+
+  jfofs_free(jfofs);
+  // can't do this here TEST_ASSERT_EQUAL_INT(0, jfofs->shmem->reference_cnt);
+
   exit(0);
   
 #if 0

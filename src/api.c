@@ -103,6 +103,11 @@ setup_t* jfofs_get_setup(jfofs_t* jfofs)
   return &(jfofs->shmem->setup);
 }
 
+jfofs_get_reference_cnt(jfofs_t* jfofs)
+{
+  return jfofs->shmem->reference_cnt;
+}
+
 void* jfofs_get_statistics(jfofs_t* jfofs)
 {
 #ifdef STATISTICS_ENABLE

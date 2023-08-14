@@ -33,6 +33,8 @@ struct shmem_s
   setup_t setup;
   int has_statistics;
   STATISTICS_T(statistics);
+  int reference_cnt;          /* Number of clients connected
+				 (not including the master) */
   fof_queue_t q;
 };
 

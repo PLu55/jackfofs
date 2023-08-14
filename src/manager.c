@@ -30,7 +30,7 @@ manager_t* manager_create(setup_t* setup, int *status)
   {
     return NULL;
   }
-
+  
   mgr = manager_new(shmem, setup, status);
 
   if (mgr == NULL)
@@ -95,7 +95,7 @@ manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status)
 
 void manager_free(manager_t* mgr)
 {
-  shm_unlink(SHMEM_NAME);
+  //shm_unlink(SHMEM_NAME);
   if (mgr->ctrl != NULL)
     ctrl_client_free(mgr->ctrl);
 
@@ -106,6 +106,8 @@ void manager_free(manager_t* mgr)
   }
   if (mgr->mix != NULL)
     mix_client_free(mgr->mix);
+  
+  shm_unlink(SHMEM_NAME);
   free(mgr);
 }
 

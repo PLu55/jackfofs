@@ -55,7 +55,7 @@ shmem_t* shmem_create(setup_t* setup, int* status)
   
   /* not linked yet, linking is done in fof_queue_init */
   shmem->q.free_fofs =  (fof_t*)((char*)shmem + fofs_offset);
-
+  shmem->reference_cnt = 0;
   shmem->has_statistics = HAS_STATISTICS; 
   STATISTICS_INIT;		 
   return shmem;
@@ -115,7 +115,8 @@ shmem_t* shmem_link(int* status)
     *status = JFOFS_SHM_MAP_ERROR;
     return NULL;
   }
-
+  
+  shmem->reference_cnt++;
   return shmem;
 }
 
@@ -127,6 +128,7 @@ shmem_t* shmem_ptr(void)
 void shmem_unmap(shmem_t* shmem)
 {
   size_t size = shmem->size;
+  shmem->reference_cnt--;
   munmap((void*) shmem, size);
 }
 
