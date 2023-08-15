@@ -142,7 +142,7 @@ void test_api(void)
   fofs_sleep(100000);
 #endif
   
-  jfofs = jfofs_new(&status);
+  jfofs = jfofs_new(&status, NULL);
   if (jfofs == NULL)
     exit(-1);
   TEST_ASSERT_NOT_NULL(jfofs);

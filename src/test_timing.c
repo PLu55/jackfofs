@@ -74,7 +74,7 @@ int main (int argc, char **argv)
   double t4_mu;
   uint64_t sample_rate;
   
-  jfofs_t* jfofs = jfofs_new(&status);  
+  jfofs_t* jfofs = jfofs_new(&status, NULL);  
 
   if (jfofs == NULL)
   {

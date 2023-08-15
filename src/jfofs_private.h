@@ -5,7 +5,7 @@
 #include <jack/jack.h>
 #include <fofs.h>
 
-#include "jfofs.h"
+#include "setup.h"
 
 #define CACHE_LINE_SIZE 64UL
 #define MAX_CHANNELS 8

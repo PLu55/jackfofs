@@ -3,7 +3,7 @@
 
 #include <jack/jack.h>
 
-#include "jfofs.h"
+#include "setup.h"
 #include "jfofs_types.h"
 #include "jfofs_private.h"
 

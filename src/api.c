@@ -1,4 +1,4 @@
-#include <fcntl.h> /* Defines O_* constants */
+#include <fcntl.h>    /* Defines O_* constants */
 #include <sys/stat.h> /* Defines mode constants */
 #include <sys/mman.h>
 #include <semaphore.h>
@@ -18,7 +18,7 @@
 
 /* TODO: Implement a check if statistics is included in shmem or not */
 
-jfofs_t* jfofs_new(int* status)
+jfofs_t* jfofs_new(int* status, shmem_t* shmem)
 {
   jfofs_t* jfofs;
   jack_status_t jstatus;
@@ -39,21 +39,28 @@ jfofs_t* jfofs_new(int* status)
   }
   
   jack_activate(jfofs->j_client);
-    
-  jfofs->shmem = shmem_link(status);
 
-  if (jfofs->shmem == NULL)
+  if( shmem != NULL)
   {
-    if (*status == JFOFS_SHM_MAP_ERROR)
+    jfofs->shmem = shmem;
+  }
+  else
+  {
+    jfofs->shmem = shmem_link(status);
+
+    if (jfofs->shmem == NULL)
     {
-      fprintf(stderr, "Error jfofs_new: can't map shared memory!\n");
+      if (*status == JFOFS_SHM_MAP_ERROR)
+      {
+	fprintf(stderr, "Error jfofs_new: can't map shared memory!\n");
+      }
+      else
+      {
+	perror(strerror(errno));   
+	*status = JFOFS_SHM_ERROR;
+      }
+      return NULL;
     }
-    else
-    {
-      perror(strerror(errno));   
-      *status = JFOFS_SHM_ERROR;
-    }
-    return NULL;
   }
 
   *status = JFOFS_SUCCESS;
@@ -98,6 +105,11 @@ int jfofs_sample_rate(jfofs_t* jfofs)
   return jfofs->shmem->q.sample_rate;
 }
 
+shmem_t* jfofs_get_shmem(jfofs_t* jfofs)
+{
+  return &(jfofs->shmem);
+}
+
 setup_t* jfofs_get_setup(jfofs_t* jfofs)
 {
   return &(jfofs->shmem->setup);
@@ -106,6 +118,15 @@ setup_t* jfofs_get_setup(jfofs_t* jfofs)
 jfofs_get_reference_cnt(jfofs_t* jfofs)
 {
   return jfofs->shmem->reference_cnt;
+}
+
+int jfofs_has_statistics(jfofs_t* jfofs)
+{
+#ifdef STATISTICS_ENABLE
+  return jfofs->shmem->has_statistics;
+#else
+  return false;
+#endif
 }
 
 void* jfofs_get_statistics(jfofs_t* jfofs)

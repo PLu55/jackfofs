@@ -125,7 +125,7 @@ int main(int argc, char** argv)
 
   atexit(exit_handler);
   setup_signal_handlers();
-  jfofs =  jfofs_new(&status);
+  jfofs =  jfofs_new(&status, NULL);
 
   if (jfofs == NULL)
   {
