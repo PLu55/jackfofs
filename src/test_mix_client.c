@@ -35,7 +35,6 @@ void test_mix_client_with_nchans(int n_chans)
   double freq;
   double ampl;
   int status;
-  jack_nframes_t sample_rate;
   shmem_t* shmem;
   fof_queue_t* q;
   setup_t setup;

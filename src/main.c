@@ -100,6 +100,15 @@ static void exit_handler(int status)
   fprintf(stderr, "exit_handler!\n");
   if (mgr != NULL)
   {
+    DUMP_STATISTICS();
+
+#ifdef DEBUG_ENABLE
+    int cnt = 0;
+    int istat;
+    istat = CHECK_FREE_LIST(&(mgr->shmem->q), &cnt, 1);
+    printf("Fof free list integrity:\n   status: %d\n   fof cnt: %d/%d\n",
+	   istat, cnt, mgr->shmem->setup.n_max_fofs);
+#endif
     manager_deactivate_clients(mgr);
     manager_free(mgr);
   }

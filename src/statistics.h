@@ -20,6 +20,7 @@ void statistics_init();
 void incr_slot_cnt(int slot);
 void incr_late_cnt();
 void incr_excess_cnt();
+void dump_statistics(void);
 
 #define STATISTICS_T(var) statistics_t var
 #define HAS_STATISTICS 1
@@ -27,7 +28,8 @@ void incr_excess_cnt();
 #define INCR_SLOT_CNT(slot) incr_slot_cnt(slot)
 #define INCR_LATE_CNT() incr_late_cnt()
 #define INCR_EXCESS_CNT() incr_excess_cnt()
- 
+#define DUMP_STATISTICS() dump_statistics()
+
 #else
 
 #define STATISTICS_T(var)
@@ -36,8 +38,11 @@ void incr_excess_cnt();
 #define INCR_SLOT_CNT(slot)
 #define INCR_LATE_CNT()
 #define INCR_EXCESS_CNT()
+#define DUMP_STATISTICS()
 
 #endif
+
+
 
 #endif
 

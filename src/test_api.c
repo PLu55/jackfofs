@@ -59,62 +59,13 @@ void setup_signal_handlers()
     sigaction (SIGTERM, &new_action, NULL);
 }
 
-void fofs_sleep(jfofs_time_t t)
-{
-  struct timespec ts;
-  struct timespec tr;
-  
-  ts.tv_sec = t / 1000000UL;
-  ts.tv_nsec = (t - ts.tv_sec) * 1000UL;
-  nanosleep(&ts, &tr);
-}
-
-void dump_setup(jfofs_t* jfofs)
-{
-  setup_t* shm_setup  = jfofs_get_setup(jfofs);
-
-  printf("Dumping setup:\n");
-  printf("  mode: %d\n", shm_setup->mode);
-  printf("  trace_level: %d\n", shm_setup->fofs_trace_level);
-  printf("  n_clients: %d\n", shm_setup->n_clients);
-  printf("  n_preallocate: %d\n", shm_setup->n_preallocate_fofs);
-  printf("  n_max_fofs: %d\n",  shm_setup->n_max_fofs);
-  printf("  n_slots: %d\n",  shm_setup->n_slots);
-  printf("  sample_rate: %d\n", shm_setup->sample_rate);
-  printf("  buffer_size: %d\n", shm_setup->buffer_size);
-  printf("  xrun_limit: %d\n", shm_setup->xrun_limit);
-}
-
-void dump_statistic(jfofs_t* jfofs)
-{
-  
-#ifdef STATISTICS_ENABLE
-  statistics_t* stats = &(jfofs->shmem->statistics);
-  int sum = 0;
-  for (int i = 0; i < stats->n_slots; i++)
-    sum += stats->slot_cnt[i];
-  printf("Dumping statistics:\n");
-  printf("total: %d\n", sum +  stats->late_cnt + stats->excess_cnt);
-  printf("excluding late and excess: %d\n", sum);
-  printf("late: %d\n", stats->late_cnt );
-  printf("excess: %d\n", stats->excess_cnt );
-  for (int i = 0; i < stats->n_slots; i++)
-    printf("slot[%d]: %d\n", i + 1, stats->slot_cnt[i]);
-#else
-  printf("statistics is not enabled, \n");
-#endif
-}
-
 void test_api(void)
 {
   jfofs_t* jfofs;
   int status;
   fof_t fof;
-  shmem_t* shmem;
   setup_t setup;
   setup_t* shm_setup;
-  struct timespec ts;
-  struct timespec tr;
   
   signal_tester_client_t* stc;
 
@@ -128,7 +79,9 @@ void test_api(void)
   setup.buffer_size = 256;
   setup.fofs_trace_level = 0;
 
-#if 0 
+#if 0
+  /* Starting jfofs demon */
+  /* could not mapp shmem in jfofs_new, address is occupide */   
   cpid = fork();
   printf("cpid: %d\n", cpid);
   if ( cpid == 0)
@@ -139,9 +92,28 @@ void test_api(void)
     exit(0);
   }
   
-  fofs_sleep(100000);
+  jfofs_sleep(100000);
+  sleep(-1);
 #endif
+
+#if 1 //0
+  /* parallel jfofs client */
+  cpid = fork();
+  printf("cpid: %d\n", cpid);
+  if ( cpid == 0)
+  {
+     printf("Client 1\n");
+    // setup_signal_handlers();
+    // mgr = manager_create(&setup, &status);
+    jfofs = jfofs_new(&status, NULL);
+    sleep(-1);
+    exit(0);
+  }
   
+  jfofs_sleep(100000);
+  printf("Client 2\n");
+#endif
+ 
   jfofs = jfofs_new(&status, NULL);
   if (jfofs == NULL)
     exit(-1);
@@ -162,7 +134,7 @@ void test_api(void)
   signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
   signal_tester_client_activate(stc);
   
-  dump_statistic(jfofs);
+  DUMP_STATISTICS();
 
   jack_connect(stc->j_client,"jfofs_mix:out_1",
 	       jack_port_name(stc->in_port));
@@ -201,11 +173,11 @@ void test_api(void)
 	  printf("slot: %d\n", i);
     }
 #endif
-    fofs_sleep(50000);
+    jfofs_sleep(50000);
   }
   signal_tester_client_deactivate(stc);
   printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
-  dump_statistic(jfofs);
+  DUMP_STATISTICS();
 
   if (cpid)
     printf("kill(%d): %d\n", cpid, kill(cpid, SIGTERM));

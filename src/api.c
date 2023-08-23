@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #include "jfofs.h"
 #include "jfofs_types.h"
@@ -42,10 +43,15 @@ jfofs_t* jfofs_new(int* status, shmem_t* shmem)
 
   if( shmem != NULL)
   {
+    jfofs->is_shmem_linked = false;
+    fprintf(stderr, "jfofs_new: shared memory is given! %p\n" , shmem);
     jfofs->shmem = shmem;
+    jfofs->shmem->reference_cnt++;
   }
   else
   {
+    jfofs->is_shmem_linked = true;
+    fprintf(stderr, "jfofs_new: shared memory is linked!\n");
     jfofs->shmem = shmem_link(status);
 
     if (jfofs->shmem == NULL)
@@ -71,7 +77,10 @@ void jfofs_free(jfofs_t* jfofs)
 {
   jack_deactivate(jfofs->j_client);
   jack_client_close(jfofs->j_client);
-  shmem_unmap(jfofs->shmem);
+  if (jfofs->is_shmem_linked)
+    shmem_unmap(jfofs->shmem);
+  else
+    jfofs->shmem->reference_cnt--;
   free(jfofs);
 }
 
@@ -105,9 +114,14 @@ int jfofs_sample_rate(jfofs_t* jfofs)
   return jfofs->shmem->q.sample_rate;
 }
 
+int jfofs_buffer_size(jfofs_t* jfofs)
+{
+  return jfofs->shmem->q.buffer_size;
+}
+
 shmem_t* jfofs_get_shmem(jfofs_t* jfofs)
 {
-  return &(jfofs->shmem);
+  return jfofs->shmem;
 }
 
 setup_t* jfofs_get_setup(jfofs_t* jfofs)
@@ -115,7 +129,7 @@ setup_t* jfofs_get_setup(jfofs_t* jfofs)
   return &(jfofs->shmem->setup);
 }
 
-jfofs_get_reference_cnt(jfofs_t* jfofs)
+int jfofs_get_reference_cnt(jfofs_t* jfofs)
 {
   return jfofs->shmem->reference_cnt;
 }

@@ -5,6 +5,7 @@ struct jfofs_s
 {
   shmem_t* shmem;
   jack_client_t* j_client;
+  int is_shmem_linked;
 };
 
 #endif

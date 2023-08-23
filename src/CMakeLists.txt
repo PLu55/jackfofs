@@ -57,6 +57,7 @@ set(TEST_SRCS
   test_mix_client.c
   api.c
   test_api.c
+  test_shmem.c
 )
 
 set(TEST_HDRS

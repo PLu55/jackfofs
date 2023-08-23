@@ -70,9 +70,7 @@ int main (int argc, char **argv)
   //time_t tv_sec;	       
   //long tv_nsec;
   uint64_t t1_0, t2_0, t3_0, t4_0, t5_0;
-  uint64_t t1, t2, t3, t4, t5, tdiff, tdl;
-  double t4_mu;
-  uint64_t sample_rate;
+  uint64_t t1, t2, t3, t4, t5;
   
   jfofs_t* jfofs = jfofs_new(&status, NULL);  
 
@@ -84,7 +82,6 @@ int main (int argc, char **argv)
       fprintf(stderr, "JFofs Error: jfofs shared memory could not be mapped.\n");
     exit(1);
   }
-  sample_rate = jfofs_sample_rate(jfofs);
   jack_client_t* jc = jack_client_open("jfofs_timing", 0, NULL); 
   jack_activate(jc);
 
@@ -104,7 +101,6 @@ int main (int argc, char **argv)
 
   t5_0 = jack_time_from_frames(jc, 48000);
 
-  double diff;
   int i = 0;
   for (;;)
   {

@@ -27,7 +27,8 @@ void add_ctrl_entry_cnt(int i);
 #define CHECK_FOF_ADDR_OR_ZERO(fof) check_fof_addrz(fof, __LINE__, __FILE__, __func__)
 #define DEFINE_FOF_LIMITS(min, max) define_fof_limits(min, max)
 #define ADD_CTRL_ENTRY_CNT(i) add_ctrl_entry_cnt(i)
-		   
+#define CHECK_FREE_LIST(q, cnt, integ) check_free_list( q, cnt, integ)
+
 #else
 
 #define DEBUG(what)
@@ -35,6 +36,7 @@ void add_ctrl_entry_cnt(int i);
 #define CHECK_FOF_ADDR_OR_ZERO(fof)
 #define DEFINE_FOF_LIMITS(min, max)
 #define ADD_CTRL_ENTRY_CNT(i)
+#define CHECK_FREE_LIST(q, cnt, integ)
 
 #endif
 
