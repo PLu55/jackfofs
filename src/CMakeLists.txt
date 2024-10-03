@@ -2,6 +2,8 @@ cmake_minimum_required (VERSION 3.24)
 
 project (Jack_Fofs VERSION 4.0.1)
 
+find_package(PkgConfig REQUIRED)
+
 set(CMAKE_C_FLAGS "-g -O0 -Wall")
 set(FOFSHOME /home/plu/Projects/fofs)
 
@@ -10,6 +12,12 @@ option(STATISTICS_ENABLE "Enable Statistics" OFF)
 
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+find_library(PIPEWIRE pipewire)
+
+if (PIPEWIRE)
+  #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAS_PIPEWIRE")
+endif()
 
 set(LIB_SRCS
   shmem.c
@@ -31,6 +39,7 @@ set(SRCS
   mix_client.c
   debug.c
   statistics.c
+  pipewire_query.c
 )
 
 set(HDRS
@@ -43,6 +52,7 @@ set(HDRS
   dsp_client.h
   debug.h
   statistics.h
+  pipewire_query.h
 )
 
 set(TEST_SRCS
@@ -72,7 +82,7 @@ set(LIBS
 
 #add_subdirectory(tests)
 
-include_directories(${FOFSHOME}/src /usr/local/include)
+include_directories(${FOFSHOME}/src /usr/local/include /usr/include/pipewire-0.3)
 
 #link_libraries(libjack.so)
 #link_libraries(libm.so)
@@ -108,3 +118,9 @@ target_sources(jfofs_stress PRIVATE
   stress_main.c
   test_util.c)
 target_link_libraries(jfofs_stress ${CMAKE_CURRENT_BINARY_DIR}/libjfofs.so)
+
+# Testing
+
+include(CTest)
+
+add_test(NAME JFOFS_MAIN_TESTING COMMAND jfofs_test)

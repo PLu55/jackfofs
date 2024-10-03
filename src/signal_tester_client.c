@@ -2,6 +2,7 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "signal_tester_client.h"
 #include "jfofs_private.h"
@@ -18,11 +19,14 @@ signal_tester_client_t* signal_tester_client_new(int* status)
     
   *status = posix_memalign((void**) &stc, CACHE_LINE_SIZE,
 			   sizeof(signal_tester_client_t));
+
   if (stc == NULL)
   {
     return NULL;
   }
+
   signal_tester_client_reset(stc);
+  stc->n_frames = 0UL;
 
   stc->j_client = jack_client_open(client_name, options, &jstatus,
 				   server_name);
@@ -72,6 +76,10 @@ float signal_tester_client_rms(signal_tester_client_t* stc)
 
 void signal_tester_client_activate(signal_tester_client_t* stc)
 {
+  if (stc->n_frames == 0)
+  {
+    printf("Warning: signal_tester_client_activate stc->n_frames is zero, nothing will be collected.\n");
+  }
   jack_activate(stc->j_client);
 }
 
@@ -89,7 +97,7 @@ int stc_process (jack_nframes_t nframes, void *arg)
 {
   jack_default_audio_sample_t *buf;
   signal_tester_client_t* stc = (signal_tester_client_t*) arg;
-
+  
   buf = jack_port_get_buffer(stc->in_port, nframes);
 
   for (int i = 0; i < nframes && stc->n < stc->n_frames; i++)

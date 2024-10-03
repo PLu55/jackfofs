@@ -16,13 +16,13 @@ void test_dsp_client(void)
   setup_t setup;
 
   setup.mode = FOF_MONO;
-  setup.fofs_trace_level = 0;
+  setup.fofs_trace_level = 30;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
   setup.n_max_fofs = 1024;
   setup.n_slots = 32;
-  setup.sample_rate = 48000;
-  setup.buffer_size = 256;
+  setup.sample_rate = 48000;   // Not known yet, normally set by manager
+  setup.max_buffer_size = 0;       // Not known yet, normally set by manager
 
   TEST_ASSERT_EQUAL_INT(0, sizeof(dsp_client_t) % CACHE_LINE_SIZE);
   dsp = dsp_client_new(&setup, 0, &status);
@@ -33,10 +33,11 @@ void test_dsp_client(void)
   TEST_ASSERT_NOT_NULL(dsp->out_port[0]);
 
   stc = signal_tester_client_new(&status);
+  TEST_ASSERT_NOT_NULL(stc);
   signal_tester_client_set_nframes(stc, (uint64_t)(setup.sample_rate * 1.1));
-
   signal_tester_client_activate(stc);
-  fof.time_us = fof_time(dsp->fof_bank);
+
+  fof.time_us = fof_time(dsp->fof_bank) + 10000UL;
   fof_default(&fof);
   dsp_client_add(dsp, &fof);
   dsp_client_activate(dsp);
@@ -44,11 +45,11 @@ void test_dsp_client(void)
   jack_connect(dsp->j_client,
 	       jack_port_name(dsp->out_port[0]),
 	       jack_port_name(stc->in_port));
-  sleep(1);
+
   TEST_ASSERT_TRUE(jack_port_connected_to(dsp->out_port[0],
 					  jack_port_name(stc->in_port)));
 
-  sleep(2);
+  usleep(800000);
 
   jack_disconnect(dsp->j_client,
 		  jack_port_name(dsp->out_port[0]),
@@ -56,10 +57,10 @@ void test_dsp_client(void)
   signal_tester_client_deactivate(stc);
   dsp_client_deactivate(dsp);
 
-  //printf("min: %f max: %f RMS: %f\n", stc->min, stc->max, signal_tester_client_rms(stc));
   TEST_ASSERT_FLOAT_WITHIN(0.1f, -1.0f, stc->min);
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 1.0f, stc->max);
-  TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.195585f, signal_tester_client_rms(stc));
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, stc->max + stc->min);
+  TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.2286602f, signal_tester_client_rms(stc));
 
   signal_tester_client_free(stc);
   dsp_client_free(dsp);

@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <math.h>
 #include <stdio.h>
 #include <unity/unity.h>
 #include <fofs.h>
@@ -48,8 +49,9 @@ void test_mix_client_with_nchans(int n_chans)
   sgen = sin_gen_new(freq, ampl, &status);
   TEST_ASSERT_NOT_NULL(sgen);
 
-  setup.sample_rate = jack_get_sample_rate(sgen->j_client);
-  setup.buffer_size = jack_get_buffer_size(sgen->j_client);
+  //setup.sample_rate = jack_get_sample_rate(sgen->j_client);
+  setup.sample_rate = 48000;
+  setup.max_buffer_size = jack_get_buffer_size(sgen->j_client);
   
   shmem = shmem_create(&setup, &status);
   TEST_ASSERT_NOT_NULL(shmem);

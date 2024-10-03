@@ -76,7 +76,7 @@ void test_api(void)
   setup.n_max_fofs = 1024;
   setup.n_slots = 64;
   setup.sample_rate = 48000;
-  setup.buffer_size = 256;
+  setup.max_buffer_size = 256;
   setup.fofs_trace_level = 0;
 
 #if 0

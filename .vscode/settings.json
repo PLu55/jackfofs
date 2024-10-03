@@ -1,0 +1,10 @@
+{
+    "cmake.sourceDirectory": "/home/plu/Projects/jackfofs/src",
+    "files.associations": {
+        "fof_queue.h": "c",
+        "fofs_private.h": "c",
+        "debug.h": "c",
+        "jfofs.h": "c",
+        "jfofs_private.h": "c"
+    }
+}

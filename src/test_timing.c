@@ -69,9 +69,10 @@ int main (int argc, char **argv)
   struct timespec rem;
   //time_t tv_sec;	       
   //long tv_nsec;
-  uint64_t t1_0, t2_0, t3_0, t4_0, t5_0;
-  uint64_t t1, t2, t3, t4, t5;
-  
+  //uint64_t t1_0, t2_0, t3_0, t4_0, t5_0;
+  //uint64_t t1, t2, t3, t4, t5;
+  uint64_t t3_0, t5_0;
+  uint64_t t3, t5;
   jfofs_t* jfofs = jfofs_new(&status, NULL);  
 
   if (jfofs == NULL)
@@ -92,12 +93,12 @@ int main (int argc, char **argv)
 
   ts.tv_sec = 1L;
   ts.tv_nsec = 0L;
-  t1_0 = now(CLOCK_MONOTONIC_RAW);
-  t2_0 = now(CLOCK_REALTIME);
+  //t1_0 = now(CLOCK_MONOTONIC_RAW);
+  //t2_0 = now(CLOCK_REALTIME);
   printf("A\n");
   t3_0 = jfofs_get_time(jfofs);
   printf("B\n");
-  t4_0 = jack_get_time();
+  //t4_0 = jack_get_time();
 
   t5_0 = jack_time_from_frames(jc, 48000);
 
@@ -106,9 +107,9 @@ int main (int argc, char **argv)
   {
     printf("Trial: %d\n", ++i);
     
-    t1 = now(CLOCK_MONOTONIC_RAW) - t1_0;
-    t4 = jack_get_time() - t4_0;
-    t2 = now(CLOCK_REALTIME) - t2_0;
+    //t1 = now(CLOCK_MONOTONIC_RAW) - t1_0;
+    //t4 = jack_get_time() - t4_0;
+    //t2 = now(CLOCK_REALTIME) - t2_0;
     t3 = jfofs_get_time(jfofs) - t3_0;
     t5 = jack_time_from_frames(jc, 48000) - t5_0;
 

@@ -40,7 +40,7 @@ void fof_queue_init(fof_queue_t* q, setup_t *setup)
 #endif
 
   q->sample_rate = setup->sample_rate;
-  q->buffer_size = setup->buffer_size;
+  q->buffer_size = setup->max_buffer_size;
   q->last_fof = NULL;
   q->excess = NULL;
   
@@ -55,7 +55,9 @@ void fof_queue_init(fof_queue_t* q, setup_t *setup)
   {
     q->slot[i] = NULL;
   }
+
   fof = q->free_fofs;
+
   for (int i = 0; i < setup->n_max_fofs - 1; i++)
   {
     fof_t* next = fof + 1;
@@ -123,6 +125,7 @@ void fof_queue_free_fofs(fof_queue_t* q, fof_t* head, fof_t* tail)
   if (fof != tail)
     fprintf(stderr, "Debug: fof_queue_free_fofs, inconsistant call!\n");
 #endif
+
   for(;;)
   {
     fof = __atomic_load_n(&(q->free_fofs),  __ATOMIC_ACQUIRE);
@@ -177,6 +180,7 @@ recalculate:
 #ifdef TRACE
   printf("slot_idx: %d\n", slot_idx);
 #endif
+
   if (slot_idx < 0)
   {
     INCR_LATE_CNT();
@@ -229,27 +233,28 @@ recalculate:
 #ifdef TRACE
       printf("fof inserted in fast lane\n");
 #endif
+
       for (;;)
       {
-	fof->next = __atomic_load_n(slot_p, __ATOMIC_ACQUIRE);
+        fof->next = __atomic_load_n(slot_p, __ATOMIC_ACQUIRE);
 
-	next_frame_check = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
-	if ( next_frame_check != next_frame)
-	{
-	  next_frame = next_frame_check;
-	  goto recalculate;
-	}
-	
-	/* Here is the glitch where a fof can end up in the wrong slot. 
-	 * It happens when q->next_frame is changed between the access
-	 * above and the setting below.
-	 */
-	
-	if (__atomic_compare_exchange_n(slot_p, &(fof->next), fof, false,
-				       __ATOMIC_RELEASE, __ATOMIC_RELAXED))
+        next_frame_check = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
+        if ( next_frame_check != next_frame)
         {
-	  break;
-	}
+          next_frame = next_frame_check;
+          goto recalculate;
+        }
+        
+        /* Here is the glitch where a fof can end up in the wrong slot. 
+        * It happens when q->next_frame is changed between the access
+        * above and the setting below.
+        */
+        
+        if (__atomic_compare_exchange_n(slot_p, &(fof->next), fof, false,
+                    __ATOMIC_RELEASE, __ATOMIC_RELAXED))
+              {
+          break;
+        }
       }
       INCR_SLOT_CNT(slot_idx);
     }
@@ -267,17 +272,17 @@ recalculate:
 
       if ( next_frame_check != next_frame)
       {
-	fof_queue_free_fof(q, fof);
-	INCR_LATE_CNT();
-	return JFOFS_FOF_LATE_WARNING;
+        fof_queue_free_fof(q, fof);
+        INCR_LATE_CNT();
+        return JFOFS_FOF_LATE_WARNING;
       }
    
       if (!__atomic_compare_exchange_n(slot_p, &slot, fof, false,
 				       __ATOMIC_RELEASE, __ATOMIC_RELAXED))
       {
-	fof_queue_free_fof(q, fof);
-	INCR_LATE_CNT();
-	return JFOFS_FOF_LATE_WARNING;
+        fof_queue_free_fof(q, fof);
+        INCR_LATE_CNT();
+        return JFOFS_FOF_LATE_WARNING;
       }
       INCR_SLOT_CNT(slot_idx);
     }

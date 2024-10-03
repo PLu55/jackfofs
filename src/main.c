@@ -6,6 +6,7 @@
 #include "config.h"
 #include "jfofs_private.h"
 #include "manager.h"
+#include "pipewire_query.h"
 
 const char *argp_program_version = PROJECT_NAME_VER;
 
@@ -196,7 +197,23 @@ int main (int argc, char **argv)
   setup.n_max_fofs = arguments.n_max_fofs;
   setup.fofs_trace_level = arguments.trace_level;
   setup.xrun_limit = arguments.xrun_limit;
-  
+  setup.verbose = arguments.verbose;
+
+#ifdef HAS_PIPEWIRE
+  char* rate = pipewire_query("default.clock.rate");
+  char* buffer = pipewire_query("default.clock.max-quantum");
+  if (rate == NULL || buffer == NULL)
+  {
+    printf("Couldn't get the sample rate or buffer size from pipewire!\n");
+    exit_handler(1);
+  }
+  setup.sample_rate = atoi(pipewire_query(rate));
+  setup.max_buffer_size = atoi(pipewire_query(buffer));
+#else
+  setup.sample_rate = 48000;
+  setup.max_buffer_size = 1024;
+#endif
+
   mgr = manager_create(&setup, &status);
   
   if (mgr == NULL)
@@ -204,8 +221,14 @@ int main (int argc, char **argv)
     printf("Couldn't start the jfofs manager, status: %d!\n", status);
     exit_handler(status);
   }
-  printf("mgr: %p\n", mgr );
-  printf("shmem: %p\n", mgr->shmem );
+
+  if (setup.verbose > 0)
+  {
+    printf("jfofs manager started!\n");
+    printf("mgr: %p\n", mgr );
+    printf("shmem: %p\n", mgr->shmem );
+  }
+
   sleep(-1);
     
   exit_handler(0);

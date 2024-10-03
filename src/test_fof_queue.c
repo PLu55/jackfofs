@@ -10,6 +10,8 @@
 #include "shmem.h"
 #include "test_util.h"
 
+// #undef VERBOSE_ENABLE
+
 void test_fof_queue_add(void)
 {
   int status;
@@ -26,7 +28,7 @@ void test_fof_queue_add(void)
   setup.n_max_fofs = 1024;
   setup.n_slots = 32;
   setup.sample_rate = 48000;
-  setup.buffer_size = 256;
+  setup.max_buffer_size = 256;
 
   shmem = shmem_create(&setup, &status);
   TEST_ASSERT_NOT_NULL(shmem);
@@ -48,17 +50,17 @@ void test_fof_queue_add(void)
   TEST_ASSERT_EQUAL_UINT64(0UL, q->slot[0]->time_us);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(fof_in.argv, q->slot[0]->argv, FOF_NUMARGS);
 
-  q->next_frame += setup.buffer_size;
+  q->next_frame += setup.max_buffer_size;
   status = fof_queue_add(q, 0UL, fof_in.argv);
   TEST_ASSERT_EQUAL_INT(JFOFS_FOF_LATE_WARNING, status);
 
-  t = jfofs_nframes_to_time(2 * setup.buffer_size + 75UL, setup.sample_rate);
+  t = jfofs_nframes_to_time(2 * setup.max_buffer_size + 75UL, setup.sample_rate);
   status = fof_queue_add(q, t, fof_in.argv);
   TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
   TEST_ASSERT_NOT_NULL(q->slot[2]);
   TEST_ASSERT_EQUAL_UINT64(t, q->slot[2]->time_us);
 
-  t = jfofs_nframes_to_time(36 * setup.buffer_size + 75UL, setup.sample_rate);
+  t = jfofs_nframes_to_time(36 * setup.max_buffer_size + 75UL, setup.sample_rate);
   status = fof_queue_add(q, t, fof_in.argv);
   TEST_ASSERT_EQUAL_INT(JFOFS_FOF_EXCESS_INFO, status);
 }
@@ -81,11 +83,13 @@ void test_fof_queue_init(void)
   setup.n_max_fofs = 1024;
   setup.n_slots = 32;
   setup.sample_rate = 48000;
-  setup.buffer_size = 256;
+  setup.max_buffer_size = 256;
 
-  //printf("page size: %d\n",  getpagesize());
+#ifdef VERBOSE_ENABLE
+  printf("page size: %d\n",  getpagesize());
   printf(" sizeof(fof_t): %ld\n",  sizeof(fof_t));
   printf(" sizeof(shmem_t): %ld\n",  sizeof(shmem_t));
+#endif
   TEST_ASSERT_EQUAL_PTR((char*)0x7f61667f3000UL,
 			shmem_aligning_ptr((char*)0x7f61667f3000UL, 64UL));
   TEST_ASSERT_EQUAL_PTR((char*)0x7f61667f3040UL,
@@ -97,9 +101,12 @@ void test_fof_queue_init(void)
   q = &(shmem->q);
 
   mem_size = shmem_layout(&setup, &slots_off, &fofs_off);
+
+#ifdef VERBOSE_ENABLE
   printf("mem_size: %ld slots_off: %ld fofs_off: %ld\n", mem_size, slots_off, fofs_off);
   printf("shmem: %p %p %p %p\n", shmem, (char*)shmem + slots_off,
 	 (char*)shmem + fofs_off,  (char*)shmem + mem_size);
+#endif
 
   fof_queue_init(q, &setup);
 
@@ -108,7 +115,7 @@ void test_fof_queue_init(void)
   TEST_ASSERT_EQUAL_INT(0, q->current_slot);
   TEST_ASSERT_EQUAL_INT(setup.n_slots, q->n_slots);
   TEST_ASSERT_EQUAL_INT(setup.sample_rate, q->sample_rate);
-  TEST_ASSERT_EQUAL_INT(setup.buffer_size, q->buffer_size);
+  TEST_ASSERT_EQUAL_INT(setup.max_buffer_size, q->buffer_size);
   TEST_ASSERT_NULL(q->excess);
   TEST_ASSERT_NOT_NULL(q->free_fofs);
   TEST_ASSERT_NOT_NULL(q->slot);
@@ -133,7 +140,6 @@ void test_fof_queue_init(void)
   TEST_ASSERT_EQUAL_INT(setup.n_max_fofs, i);
   fof = q->free_fofs + setup.n_max_fofs - 1;
   TEST_ASSERT_NULL(fof->next);
-  printf("last fof: %p\n", fof); 
 
 #if 0
   char filename[50];
@@ -171,7 +177,7 @@ void test_fof_queue_free_list(void)
   setup.n_max_fofs = 128;
   setup.n_slots = 32;
   setup.sample_rate = 48000;
-  setup.buffer_size = 256;
+  setup.max_buffer_size = 256;
 
   shmem = shmem_create(&setup, &status);
   TEST_ASSERT_NOT_NULL(shmem);

@@ -21,7 +21,6 @@ void fof_default(fof_t* fof)
   fof->argv[FOF_ARG_pan3]   =     0.0f;
 }
 
-
 void fof_print(fof_t* fof)
 {
   printf("fof @%p:\n", fof);
@@ -65,6 +64,6 @@ void dump_setup(jfofs_t* jfofs)
   printf("  n_max_fofs: %d\n",  shm_setup->n_max_fofs);
   printf("  n_slots: %d\n",  shm_setup->n_slots);
   printf("  sample_rate: %d\n", shm_setup->sample_rate);
-  printf("  buffer_size: %d\n", shm_setup->buffer_size);
+  printf("  buffer_size: %d\n", shm_setup->max_buffer_size);
   printf("  xrun_limit: %d\n", shm_setup->xrun_limit);
 }

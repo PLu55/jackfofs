@@ -2,7 +2,7 @@
 #include <fofs.h>
 
 #include "config.h"
-#include "fofs_private.h"
+//#include "fofs_private.h"
 #include "fof_queue.h"
 #include "debug.h"
 
@@ -10,6 +10,16 @@
 
 debug_info_t debug_info;
 
+void printf_setup(setup_t* setup)
+{
+  printf("   mode: %d\n", setup->mode);
+  printf("   n_preallocate_fofs: %d\n", setup->n_preallocate_fofs);
+  printf("   n_max_fofs: %d\n", setup->n_max_fofs);
+  printf("   n_slots: %d\n", setup->n_slots);
+  printf("   sample_rate: %d\n", setup->sample_rate);
+  printf("   max_buffer_size: %d\n", setup->max_buffer_size);
+  printf("   fofs_trace_level: %d\n", setup->fofs_trace_level);
+}
 void define_fof_limits(void* min, void* max)
 {
   debug_info.fof_min = min;

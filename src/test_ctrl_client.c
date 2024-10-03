@@ -18,8 +18,6 @@ void test_ctrl_client(void)
   int status;
   jack_nframes_t n ,m;
   fof_t fof;
-  jack_nframes_t sample_rate;
-  jack_nframes_t buffer_size;
   jack_time_t t0;
   setup_t setup;
   shmem_t *shmem;
@@ -27,35 +25,43 @@ void test_ctrl_client(void)
 
   //TEST_ASSERT_EQUAL_UINT(0, sizeof(ctrl_client_t) % CACHE_LINE_SIZE);
 
+#ifdef VERBOSE_ENABLE
   printf("fofs version: %s\n", fof_version());
+#endif
 
+  setup.fofs_trace_level = 0;
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
   setup.n_max_fofs = 1024;
   setup.n_slots = 32;
-  setup.sample_rate = 48000;
-  setup.buffer_size = 256;
+  setup.sample_rate = 0; // Not known yet, normally set by manager
+  setup.max_buffer_size = 0; // Not known yet, normally set by manager
 
+  // Check if Jack is running
+  //TEST_ASSERT_GREATER_THAN_INT(44100, setup.sample_rate);
+  
   shmem = shmem_create(&setup, &status);
   TEST_ASSERT_NOT_NULL(shmem);
 
   size_t slots_off;
   size_t fofs_off;
-  size_t size; 
+  size_t size;
   size = shmem_layout(&setup, &slots_off, &fofs_off);
+
+#ifdef VERBOSE_ENABLE
   printf("shmem: %p - %p\n", shmem, (char*)shmem + size);
+#endif
 
   q = &(shmem->q);
   ctrl = ctrl_client_new(&setup, q, &status);
   TEST_ASSERT_NOT_NULL(ctrl);
   TEST_ASSERT_NOT_NULL(ctrl->q);
 
-  sample_rate = jack_get_sample_rate(ctrl->j_client);
-  buffer_size = jack_get_buffer_size(ctrl->j_client);
-  setup.sample_rate = sample_rate;
-  setup.buffer_size = buffer_size;
-
+  setup.sample_rate = jack_get_sample_rate(ctrl->j_client);
+  setup.max_buffer_size = jack_get_buffer_size(ctrl->j_client);
+  printf("sample_rate: %d buffer_size: %d\n", setup.sample_rate, setup.max_buffer_size);
+  
   fof_queue_init(q, &setup);
 
   ctrl->dsp[0] = dsp_client_new(&setup, 0, &status);
@@ -66,16 +72,28 @@ void test_ctrl_client(void)
   // Run empty for 2 sec.
   ctrl_client_activate(ctrl);
   TEST_ASSERT_EQUAL_UINT64(0, ctrl->q->next_frame);
-  usleep(100);
+
+  // Wait until client is running
+  for (int i = 0; i < 100; i++)
+  {
+    if (ctrl->q->next_frame > 0) break;
+    usleep(1000);
+  }
+
   n = jack_frame_time(ctrl->j_client);
   usleep(2000000 - 100);
   m = jack_frame_time(ctrl->j_client);
-  TEST_ASSERT_INT_WITHIN(500, 96000, m - n);
-  n = (2 * sample_rate / buffer_size + 1) * buffer_size;
-  TEST_ASSERT_INT_WITHIN(500, n, ctrl->q->next_frame);
+
+#ifdef VERBOSE_ENABLE
+  printf("n: %u, m: %u m-n: %u\n", n, m, m - n);
+#endif
+
+  TEST_ASSERT_INT_WITHIN(10, 96000, m - n);
+  n = (2 * setup.sample_rate / setup.max_buffer_size + 1) * setup.max_buffer_size;
+  TEST_ASSERT_INT_WITHIN(10, n, ctrl->q->next_frame);
 
   // Add a fof
-  n = (jack_frame_time(ctrl->j_client) - t0 + 64) * 1000000ULL / sample_rate;
+  n = (jack_frame_time(ctrl->j_client) - t0 + 64) * 1000000ULL / setup.sample_rate;
   fof_default(&fof);
   fof.time_us = n;
   status = fof_queue_add(ctrl->q, n, fof.argv);

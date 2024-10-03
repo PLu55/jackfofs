@@ -79,10 +79,12 @@ manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status)
   mgr->mix->q = mgr->q;
   
   setup->sample_rate = jack_get_sample_rate(mgr->ctrl->j_client);
-  setup->buffer_size = jack_get_buffer_size(mgr->ctrl->j_client);
+  setup->max_buffer_size = jack_get_buffer_size(mgr->ctrl->j_client);
 
   fof_queue_init(mgr->q, setup);
   
+  printf("manager: setup.fof_trace_level: %d\n", setup->fofs_trace_level)
+  ;
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     dsp_client_t* dsp = dsp_client_new(setup, i, status);
@@ -165,6 +167,7 @@ int manager_connect_clients(manager_t* mgr)
     status = jack_connect(mgr->ctrl->j_client,
 			  jack_port_name(mgr->ctrl->port),
 			  jack_port_name(mgr->dsp[i]->in_port));
+
     if (status)
       return status;
   }
@@ -172,6 +175,7 @@ int manager_connect_clients(manager_t* mgr)
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     dsp_client_t* dsp = mgr->dsp[i];
+
     for (int j = 0; j < dsp->n_chans; j++)
     {
       status = jack_connect(dsp->j_client,
@@ -179,7 +183,7 @@ int manager_connect_clients(manager_t* mgr)
 			    jack_port_name(mgr->mix->in_port[j]));
 
       if (status)
-	return status;
+	      return status;
     }
   }
   

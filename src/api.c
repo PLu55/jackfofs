@@ -17,8 +17,6 @@
 #include "statistics.h"
 #include "test_util.h"
 
-/* TODO: Implement a check if statistics is included in shmem or not */
-
 jfofs_t* jfofs_new(int* status, shmem_t* shmem)
 {
   jfofs_t* jfofs;

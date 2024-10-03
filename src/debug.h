@@ -36,7 +36,7 @@ void add_ctrl_entry_cnt(int i);
 #define CHECK_FOF_ADDR_OR_ZERO(fof)
 #define DEFINE_FOF_LIMITS(min, max)
 #define ADD_CTRL_ENTRY_CNT(i)
-#define CHECK_FREE_LIST(q, cnt, integ)
+#define CHECK_FREE_LIST(q, cnt, integ) 0
 
 #endif
 
