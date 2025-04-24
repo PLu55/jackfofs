@@ -11,8 +11,11 @@
 #include "test_util.h"
 #include <stdio.h>
 
-int ctrl_client_process(jack_nframes_t nframes, void *arg);
-int ctrl_client_xrun(void* arg);
+int ctrl_client_process_cb(jack_nframes_t nframes, void *arg);
+int ctrl_client_xrun_cb(void* arg);
+int ctrl_client_buffer_size_cb(jack_nframes_t nframes, void *arg);
+// 
+
 
 ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
 {
@@ -49,13 +52,15 @@ ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
     return NULL;
   }
   
-  jack_set_process_callback (ctrl->j_client, ctrl_client_process,
+  jack_set_process_callback (ctrl->j_client, ctrl_client_process_cb,
 			     (void*) ctrl);
   ctrl->port = jack_port_register(ctrl->j_client, "out",
 				  JACK_DEFAULT_AUDIO_TYPE,
 				  JackPortIsOutput, 0);
-  jack_set_xrun_callback(ctrl->j_client, ctrl_client_xrun,
+  jack_set_xrun_callback(ctrl->j_client, ctrl_client_xrun_cb,
 			     (void*) ctrl);
+  jack_set_buffer_size_callback(ctrl->j_client, ctrl_client_buffer_size_cb, (void*) ctrl);
+
   return ctrl;
 }
 
@@ -87,7 +92,7 @@ static inline jfofs_time_t get_framestamp(ctrl_client_t* ctrl)
   return jack_frame_time(ctrl->j_client);
 }
 
-int ctrl_client_process(jack_nframes_t nframes, void *arg)
+int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
 {
   ctrl_client_t* ctrl = (ctrl_client_t*) arg;
   fof_queue_t* q = ctrl->q;
@@ -185,7 +190,7 @@ int ctrl_client_process(jack_nframes_t nframes, void *arg)
   return 0;      
 }
 
-int ctrl_client_xrun(void* arg)
+int ctrl_client_xrun_cb(void* arg)
 {
   ctrl_client_t* ctrl = (ctrl_client_t*) arg;
 
@@ -196,5 +201,10 @@ int ctrl_client_xrun(void* arg)
     abort();
   }
   return 0;
+}
+int ctrl_client_buffer_size_cb(jack_nframes_t size, void* arg)
+{
+  ctrl_client_t* ctrl = (ctrl_client_t*) arg;
+  
 }
 	

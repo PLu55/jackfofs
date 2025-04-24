@@ -18,7 +18,7 @@ struct fof_queue_s
   uint64_t current_slot;
   int n_slots;
   int sample_rate;  
-  int buffer_size;
+  int buffer_size;      /* size of audio buffer, determine the size of the slots */
   DEBUG(int max_fofs);
   DEBUG(int free_cnt);
   DEBUG(int active_cnt);

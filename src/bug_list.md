@@ -8,3 +8,4 @@
 * better structure of sources and headers 
 * check test_api
 * check handling of setup data
+* buffer size given by jack i changing. we need to handle that!
