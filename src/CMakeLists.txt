@@ -92,11 +92,17 @@ add_executable(jfofs)
 target_sources(jfofs PRIVATE main.c ${SRCS} ${HDRS})
 target_link_libraries(jfofs ${LIBS})
 
+install(TARGETS jfofs
+        RUNTIME DESTINATION bin)
+
 add_library(jfofs_api SHARED)
 set_target_properties(jfofs_api
   PROPERTIES OUTPUT_NAME "jfofs")
 target_sources(jfofs_api PRIVATE ${LIB_SRCS})
 target_link_libraries(jfofs_api libjack.so)
+
+install(TARGETS jfofs_api
+        LIBRARY DESTINATION lib)       
 
 add_executable(jfofs_test)
 target_sources(jfofs_test PRIVATE ${TEST_SRCS} ${TEST_HDRS} ${SRCS} ${HDRS})
