@@ -52,14 +52,14 @@ to the mix client which are running in parallel.
 
 ### Unity
 
-https://www.throwtheswitch.org/unity/
+<https://www.throwtheswitch.org/unity/>
 
 Cheat Sheet:
-https://github.com/ThrowTheSwitch/Unity/blob/master/docs/UnityAssertionsCheatSheetSuitableforPrintingandPossiblyFraming.pdf
+<https://github.com/ThrowTheSwitch/Unity/blob/master/docs/UnityAssertionsCheatSheetSuitableforPrintingandPossiblyFraming.pdf>
 
 ### Unity and CMake
 
-https://honeytreelabs.com/posts/cmake-unity-integration/
+<https://honeytreelabs.com/posts/cmake-unity-integration/>
 
 ### Valgrind
 
@@ -67,11 +67,11 @@ https://honeytreelabs.com/posts/cmake-unity-integration/
 
 ## IPC
 
-https://www.tutorialspoint.com/inter_process_communication/index.htm
+<https://www.tutorialspoint.com/inter_process_communication/index.htm>
 
-https://opensource.com/sites/default/files/gated-content/inter-process_communication_in_linux.pdf
+<https://opensource.com/sites/default/files/gated-content/inter-process_communication_in_linux.pdf>
 
-https://biendltb.github.io/tech/inter-process-communication-ipc-in-cpp/
+<https://biendltb.github.io/tech/inter-process-communication-ipc-in-cpp/>
 
 ## Shared memory
 
