@@ -10,16 +10,15 @@
 #include "config.h"
 
 static char doc[] =
-  "jfofsstress is a program that put pressure on the jfofs server";
+    "jfofsstress is a program that put pressure on the jfofs server";
 
 static struct argp_option options[] = {
-  {"verbose",     'v', 0,            0, "Produce verbose output" },
-  {"adur",        'a', "f",          0, "duration (alpha) of a single fof in s, [0.01]"}, 
-  {"bdur",        'b', "f",          0, "duration of the attack (beta) of a single fof in s, [0.001]"}, 
-  {"sleep",       's', "t",          0, "time between fofs in µs, [2000]"}, 
-  {"latancy",     'l', "l",          0, "how far ahead the fofs are added in µs, [500]"}, 
-  { 0 }
-};
+    {"verbose", 'v', 0, 0, "Produce verbose output", 0},
+    {"adur", 'a', "f", 0, "duration (alpha) of a single fof in s, [0.01]", 0},
+    {"bdur", 'b', "f", 0, "duration of the attack (beta) of a single fof in s, [0.001]", 0},
+    {"sleep", 's', "t", 0, "time between fofs in µs, [2000]", 0},
+    {"latancy", 'l', "l", 0, "how far ahead the fofs are added in µs, [500]", 0},
+    {0, 0, 0, 0, 0, 0}};
 
 struct arguments
 {
@@ -30,42 +29,42 @@ struct arguments
   int latancy;
 };
 
-static error_t parse_opt (int key, char *arg, struct argp_state *state)
+static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
   struct arguments *arguments = state->input;
 
   switch (key)
-    {
-    case 'v':
-      arguments->verbose = 1;
-      break;
-    case 'a':
-      arguments->adur = atof(arg);
-      break;
-    case 'b':
-      arguments->bdur = atof(arg);
-      break;
-    case 's':
-      arguments->sleep = atoi(arg);
-      break;
-    case 'l':
-      arguments->latancy = atoi(arg);
-      break;
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
+  {
+  case 'v':
+    arguments->verbose = 1;
+    break;
+  case 'a':
+    arguments->adur = atof(arg);
+    break;
+  case 'b':
+    arguments->bdur = atof(arg);
+    break;
+  case 's':
+    arguments->sleep = atoi(arg);
+    break;
+  case 'l':
+    arguments->latancy = atoi(arg);
+    break;
+  default:
+    return ARGP_ERR_UNKNOWN;
+  }
   return 0;
 }
 
-static struct argp argp = { options, parse_opt, 0, doc };
+static struct argp argp = {options, parse_opt, 0, doc, 0, 0, 0};
 
-static jfofs_t* jfofs = NULL;
+static jfofs_t *jfofs = NULL;
 
 static inline void sleep_us(jfofs_time_t t)
 {
   struct timespec ts;
   struct timespec tr;
-  
+
   ts.tv_sec = t / 1000000UL;
   ts.tv_nsec = (t - ts.tv_sec) * 1000UL;
   nanosleep(&ts, &tr);
@@ -79,7 +78,7 @@ static void exit_handler(void)
   }
 }
 
-static void termination_handler (int signum)
+static void termination_handler(int signum)
 {
   printf("terminating: %d\n", signum);
   exit(-1);
@@ -93,18 +92,18 @@ static void setup_signal_handlers(void)
   sigemptyset(&new_action.sa_mask);
   new_action.sa_flags = 0;
 
-  sigaction (SIGINT, NULL, &old_action);
+  sigaction(SIGINT, NULL, &old_action);
   if (old_action.sa_handler != SIG_IGN)
-    sigaction (SIGINT, &new_action, NULL);
-  sigaction (SIGHUP, NULL, &old_action);
+    sigaction(SIGINT, &new_action, NULL);
+  sigaction(SIGHUP, NULL, &old_action);
   if (old_action.sa_handler != SIG_IGN)
-    sigaction (SIGHUP, &new_action, NULL);
-  sigaction (SIGTERM, NULL, &old_action);
+    sigaction(SIGHUP, &new_action, NULL);
+  sigaction(SIGTERM, NULL, &old_action);
   if (old_action.sa_handler != SIG_IGN)
-    sigaction (SIGTERM, &new_action, NULL);
+    sigaction(SIGTERM, &new_action, NULL);
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
   int status;
   fof_t fof;
@@ -112,27 +111,27 @@ int main(int argc, char** argv)
   uint64_t cnt = 0;
   int tcnt = 0;
   int s6_cnt = 0;
-  
+
   struct arguments arguments;
-  
+
   arguments.verbose = 0;
   arguments.adur = 0.01;
   arguments.bdur = 0.001;
   arguments.sleep = 2000;
-  arguments.latancy = 500; 
+  arguments.latancy = 500;
 
-  argp_parse (&argp, argc, argv, 0, 0, &arguments);
+  argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
   atexit(exit_handler);
   setup_signal_handlers();
-  jfofs =  jfofs_new(&status, NULL);
+  jfofs = jfofs_new(&status, NULL);
 
   if (jfofs == NULL)
   {
     printf("Can't create a jfofs client!");
     exit(-1);
   }
-  
+
   fof_default(&fof);
   fof.argv[FOF_ARG_beta] = arguments.bdur;
   fof.argv[FOF_ARG_alpha] = fof_t60_to_alpha(arguments.adur);
@@ -145,14 +144,25 @@ int main(int argc, char** argv)
   for (;;)
   {
     t = jfofs_get_time(jfofs) + arguments.latancy;
-    status =  jfofs_add(jfofs, t, fof.argv);
+    status = jfofs_add(jfofs, t,
+                       fof.argv[FOF_ARG_ampl],
+                       fof.argv[FOF_ARG_freq],
+                       fof.argv[FOF_ARG_gliss],
+                       fof.argv[FOF_ARG_phi],
+                       fof.argv[FOF_ARG_beta],
+                       fof.argv[FOF_ARG_alpha],
+                       fof.argv[FOF_ARG_amin],
+                       fof.argv[FOF_ARG_cutoff],
+                       fof.argv[FOF_ARG_pan1],
+                       fof.argv[FOF_ARG_pan2],
+                       fof.argv[FOF_ARG_pan3]);
     if (status != 0)
     {
       printf("status: %d\n", status);
       if (status == 6 && ++s6_cnt > 10)
       {
-	printf("To many status 6, exiting now.");
-	exit(-1);
+        printf("To many status 6, exiting now.");
+        exit(-1);
       }
     }
     sleep_us(arguments.sleep);
@@ -163,8 +173,8 @@ int main(int argc, char** argv)
       fflush(stdout);
       if (++tcnt > 60)
       {
-	printf("\n");
-	tcnt = 0;
+        printf("\n");
+        tcnt = 0;
       }
     }
   }

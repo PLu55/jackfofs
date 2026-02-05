@@ -7,12 +7,12 @@
 #include "ctrl_client.h"
 #include "dsp_client.h"
 
-int dsp_client_process (jack_nframes_t nframes, void *arg);
-int dsp_client_buffer_size_callback (jack_nframes_t nframes, void *arg);
+int dsp_client_process(jack_nframes_t nframes, void *arg);
+int dsp_client_buffer_size_callback(jack_nframes_t nframes, void *arg);
 
-dsp_client_t* dsp_client_new(setup_t* setup, int idx, int* status)
+dsp_client_t *dsp_client_new(setup_t *setup, int idx, int *status)
 {
-  dsp_client_t* dsp;
+  dsp_client_t *dsp = NULL;
   const char *client_name_base = "jfofs_dsp";
   char client_name[64];
   const char *server_name = NULL;
@@ -21,11 +21,11 @@ dsp_client_t* dsp_client_new(setup_t* setup, int idx, int* status)
   jack_nframes_t sample_rate;
   jack_nframes_t buffer_size;
 
-  sprintf( client_name, "%s%02d", client_name_base, idx + 1);
+  sprintf(client_name, "%s%02d", client_name_base, idx + 1);
 
-  *status = posix_memalign((void**) &dsp, CACHE_LINE_SIZE, sizeof(dsp_client_t));
-  
-  if (dsp == NULL)
+  *status = posix_memalign((void **)&dsp, CACHE_LINE_SIZE, sizeof(dsp_client_t));
+
+  if (*status != 0 || dsp == NULL)
   {
     return NULL;
   }
@@ -33,27 +33,27 @@ dsp_client_t* dsp_client_new(setup_t* setup, int idx, int* status)
   dsp->n_fofs = 0;
   dsp->n_chans = fof_ModeToChannels(setup->mode);
   dsp->j_client = jack_client_open(client_name, options, &jstatus, server_name);
-  
+
   if (dsp->j_client == NULL)
   {
     free(dsp);
     return NULL;
   }
 
-  jack_set_process_callback(dsp->j_client , dsp_client_process, (void*) dsp);
+  jack_set_process_callback(dsp->j_client, dsp_client_process, (void *)dsp);
   jack_set_buffer_size_callback(dsp->j_client, dsp_client_buffer_size_callback,
-	          (void*) dsp);
+                                (void *)dsp);
 
   sample_rate = jack_get_sample_rate(dsp->j_client);
   buffer_size = jack_get_buffer_size(dsp->j_client); // Jack might change this, and it does.
-  buffer_size = MAX_FOFS_BUF_SIZE; // FIXME: Hardcoded buffer size, fofs library should be able to handle changes in buffer size.
+  buffer_size = MAX_FOFS_BUF_SIZE;                   // FIXME: Hardcoded buffer size, fofs library should be able to handle changes in buffer size.
 
   dsp->fof_bank = fof_newBank(sample_rate, setup->mode,
-			      setup->n_preallocate_fofs, (int) buffer_size);  // jack_nframes_t sample_rate = jack_get_sample_rate(dsp->j_client);
+                              setup->n_preallocate_fofs, (int)buffer_size); // jack_nframes_t sample_rate = jack_get_sample_rate(dsp->j_client);
   // jack_nframes_t buffer_size = jack_get_buffer_size(dsp->j_client);
   // fof_set_sample_rate(dsp->fof_bank, sample_rate);
   // fof_set_buffer_size(dsp->fof_bank, buffer_size);
-  
+
   if (dsp->fof_bank == NULL)
   {
     free(dsp);
@@ -61,11 +61,11 @@ dsp_client_t* dsp_client_new(setup_t* setup, int idx, int* status)
   }
 
   fof_set_trace_level(setup->fofs_trace_level);
-    
+
   dsp->in_port = jack_port_register(dsp->j_client, "in",
-				    JACK_DEFAULT_AUDIO_TYPE,
-				    JackPortIsInput, 0);
-  
+                                    JACK_DEFAULT_AUDIO_TYPE,
+                                    JackPortIsInput, 0);
+
   if (dsp->in_port == NULL)
   {
     return NULL;
@@ -73,11 +73,11 @@ dsp_client_t* dsp_client_new(setup_t* setup, int idx, int* status)
   for (int i = 0; i < dsp->n_chans; i++)
   {
     char name[64];
-    
-    sprintf (name, "out_%d", i+1);
+
+    sprintf(name, "out_%d", i + 1);
     dsp->out_port[i] = jack_port_register(dsp->j_client, name,
-					  JACK_DEFAULT_AUDIO_TYPE,
-					  JackPortIsOutput, 0);
+                                          JACK_DEFAULT_AUDIO_TYPE,
+                                          JackPortIsOutput, 0);
     if (dsp->out_port[i] == NULL)
     {
       return NULL;
@@ -87,29 +87,29 @@ dsp_client_t* dsp_client_new(setup_t* setup, int idx, int* status)
   return dsp;
 }
 
-uint64_t dsp_get_next_frame(dsp_client_t* dsp)
+uint64_t dsp_get_next_frame(dsp_client_t *dsp)
 {
   return fof_timeI(dsp->fof_bank);
 }
 
-void dsp_set_next_frame(dsp_client_t* dsp, uint64_t n)
+void dsp_set_next_frame(dsp_client_t *dsp, uint64_t n)
 {
   fof_set_timeI(dsp->fof_bank, n);
 }
 
-int dsp_client_activate(dsp_client_t* dsp)
+int dsp_client_activate(dsp_client_t *dsp)
 {
   return jack_activate(dsp->j_client);
 }
 
-int dsp_client_deactivate(dsp_client_t* dsp)
+int dsp_client_deactivate(dsp_client_t *dsp)
 {
   return jack_deactivate(dsp->j_client);
 }
 
 /*
  * memory layout of buffers:
- *--------------------------------- 
+ *---------------------------------
  * ptr-1
  *---------------------------------
  * ptr-2
@@ -129,30 +129,31 @@ int dsp_client_deactivate(dsp_client_t* dsp)
  *
  */
 
-int dsp_client_process (jack_nframes_t nframes, void *arg)
+int dsp_client_process(jack_nframes_t nframes, void *arg)
 {
-  dsp_client_t* dsp = (dsp_client_t*) arg;
+  dsp_client_t *dsp = (dsp_client_t *)arg;
   jack_default_audio_sample_t *buf[MAX_CHANNELS];
 
-  //printf("dsp_client_process: bufs: %p n: %d\n", buf, nframes);
+  // printf("dsp_client_process: bufs: %p n: %d\n", buf, nframes);
 
-  for(int i = 0; i < dsp->n_chans; i++)
+  for (int i = 0; i < dsp->n_chans; i++)
   {
     buf[i] = jack_port_get_buffer(dsp->out_port[i], nframes);
-    if (buf[i] == NULL) {
+    if (buf[i] == NULL)
+    {
       fprintf(stderr, "Error: Failed to get buffer for channel %d\n", i);
       return 1; // Return an error code
     }
-    //printf("dsp_client_process buf[%d]: %p\n", i, buf[i]);
+    // printf("dsp_client_process buf[%d]: %p\n", i, buf[i]);
   }
-  
+
   fof_next(dsp->fof_bank, nframes, buf);
 
 #ifdef ZERO_OUT
 
   for (int i = 0; i < dsp->n_chans; i++)
   {
-    for (int j = 0; j < nframes; j++)
+    for (jack_nframes_t j = 0; j < nframes; j++)
     {
       buf[i][j] = 0.0f;
     }
@@ -162,7 +163,7 @@ int dsp_client_process (jack_nframes_t nframes, void *arg)
   return 0;
 }
 
-void dsp_client_free(dsp_client_t* dsp)
+void dsp_client_free(dsp_client_t *dsp)
 {
   dsp_client_deactivate(dsp);
   jack_client_close(dsp->j_client);
@@ -170,9 +171,10 @@ void dsp_client_free(dsp_client_t* dsp)
   free(dsp);
 }
 
-int dsp_client_buffer_size_callback (jack_nframes_t nframes, void *arg)
+int dsp_client_buffer_size_callback(jack_nframes_t nframes, void *arg)
 {
-  //dsp_client_t* dsp = (dsp_client_t*) arg;
+  // dsp_client_t* dsp = (dsp_client_t*) arg;
+  (void)arg;
 
   if (nframes > MAX_FOFS_BUF_SIZE)
   {

@@ -9,11 +9,11 @@
 /* memory layout:
 
  *************************
- shmem_t                   
+ shmem_t
  *************************
  fof_t[n_slots]            <--- q->slot
  *************************
- fof_t[n_max_fofs]         
+ fof_t[n_max_fofs]
  **************************/
 
 typedef struct shmem_s shmem_t;
@@ -28,23 +28,23 @@ struct shmem_offsets_s
 
 struct shmem_s
 {
-  shmem_t* base;
+  shmem_t *base;
   size_t size;
   setup_t setup;
   int has_statistics;
-  STATISTICS_T(statistics);
-  int reference_cnt;          /* Number of clients connected
-				 (not including the master) */
+  STATISTICS_FIELD(statistics)
+  int reference_cnt; /* Number of clients connected
+(not including the master) */
   fof_queue_t q;
 };
 
 /* TODO: replace setup with n_slots and n_max_fofs */
-shmem_t* shmem_create(setup_t* setup, int* status);
-shmem_t* shmem_link(int* status);
-void shmem_unlink(shmem_t* shmem);
-void shmem_unmap(shmem_t* shmem);
-char* shmem_aligning_ptr(char* ptr, size_t alignment_size);
-size_t shmem_layout(setup_t* setup, size_t* slots_off, size_t* fofs_off);
-shmem_t* shmem_ptr(void);
+shmem_t *shmem_create(setup_t *setup, int *status);
+shmem_t *shmem_link(int *status);
+void shmem_unlink(shmem_t *shmem);
+void shmem_unmap(shmem_t *shmem);
+char *shmem_aligning_ptr(char *ptr, size_t alignment_size);
+size_t shmem_layout(setup_t *setup, size_t *slots_off, size_t *fofs_off);
+shmem_t *shmem_ptr(void);
 
 #endif

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <jack/jack.h>
 #include <time.h>
+#include <inttypes.h>
 #include <fofs.h>
 
 #include "fof_queue.h"
@@ -12,26 +13,25 @@
 #include <stdio.h>
 
 int ctrl_client_process_cb(jack_nframes_t nframes, void *arg);
-int ctrl_client_xrun_cb(void* arg);
+int ctrl_client_xrun_cb(void *arg);
 int ctrl_client_buffer_size_cb(jack_nframes_t nframes, void *arg);
-// 
+//
 
-
-ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
+ctrl_client_t *ctrl_client_new(setup_t *setup, fof_queue_t *q, int *status)
 {
-  ctrl_client_t* ctrl;
+  ctrl_client_t *ctrl = NULL;
   const char *client_name = "jfofs_controller";
   const char *server_name = NULL;
   jack_options_t options = JackNullOption;
   jack_status_t jstatus;
-  
-  *status = posix_memalign((void**) &ctrl, CACHE_LINE_SIZE,
-			   sizeof(ctrl_client_t));
-  if (ctrl == NULL)
+
+  *status = posix_memalign((void **)&ctrl, CACHE_LINE_SIZE,
+                           sizeof(ctrl_client_t));
+  if (*status != 0 || ctrl == NULL)
   {
     return NULL;
   }
-  
+
   ctrl->active = 0;
   ctrl->q = q;
   ctrl->n_clients = setup->n_clients;
@@ -45,61 +45,61 @@ ctrl_client_t* ctrl_client_new(setup_t* setup, fof_queue_t* q, int* status)
   ctrl->xruns = 0;
   ctrl->xrun_limit = setup->xrun_limit;
   ctrl->j_client = jack_client_open(client_name, options, &jstatus,
-				    server_name);
+                                    server_name);
   if (ctrl->j_client == NULL)
   {
     *status = JFOFS_JACK_ERROR_MASK | jstatus;
     return NULL;
   }
-  
-  jack_set_process_callback (ctrl->j_client, ctrl_client_process_cb,
-			     (void*) ctrl);
+
+  jack_set_process_callback(ctrl->j_client, ctrl_client_process_cb,
+                            (void *)ctrl);
   ctrl->port = jack_port_register(ctrl->j_client, "out",
-				  JACK_DEFAULT_AUDIO_TYPE,
-				  JackPortIsOutput, 0);
+                                  JACK_DEFAULT_AUDIO_TYPE,
+                                  JackPortIsOutput, 0);
   jack_set_xrun_callback(ctrl->j_client, ctrl_client_xrun_cb,
-			     (void*) ctrl);
-  jack_set_buffer_size_callback(ctrl->j_client, ctrl_client_buffer_size_cb, (void*) ctrl);
+                         (void *)ctrl);
+  jack_set_buffer_size_callback(ctrl->j_client, ctrl_client_buffer_size_cb, (void *)ctrl);
 
   return ctrl;
 }
 
-int ctrl_client_activate(ctrl_client_t* ctrl)
+int ctrl_client_activate(ctrl_client_t *ctrl)
 {
   ctrl->active = 1;
   return jack_activate(ctrl->j_client);
 }
 
-int ctrl_client_deactivate(ctrl_client_t* ctrl)
+int ctrl_client_deactivate(ctrl_client_t *ctrl)
 {
   ctrl->active = 0;
   return jack_deactivate(ctrl->j_client);
 }
 
-void ctrl_client_free(ctrl_client_t* ctrl)
+void ctrl_client_free(ctrl_client_t *ctrl)
 {
   jack_deactivate(ctrl->j_client);
   jack_client_close(ctrl->j_client);
   free(ctrl);
 }
 
-static inline jfofs_time_t get_framestamp(ctrl_client_t* ctrl)
+static inline jfofs_time_t get_framestamp(ctrl_client_t *ctrl)
 {
-  //struct timespec tp;
-  //clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
-  //return tp.tv_sec * 1000000UL + tp.tv_nsec / 1000UL * ctrl->q->sample_rate;
+  // struct timespec tp;
+  // clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
+  // return tp.tv_sec * 1000000UL + tp.tv_nsec / 1000UL * ctrl->q->sample_rate;
 
   return jack_frame_time(ctrl->j_client);
 }
 
 int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
 {
-  ctrl_client_t* ctrl = (ctrl_client_t*) arg;
-  fof_queue_t* q = ctrl->q;
+  ctrl_client_t *ctrl = (ctrl_client_t *)arg;
+  fof_queue_t *q = ctrl->q;
   unsigned int slot_idx;
-  fof_t* fof;
+  fof_t *fof;
   int i = 0;
-  dsp_client_t* dsp;
+  dsp_client_t *dsp;
   uint64_t n;
   uint64_t m;
 
@@ -112,15 +112,15 @@ int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
 #endif
 
   ADD_CTRL_ENTRY_CNT(1);
-  
+
   /* TODO: fix atomic access, what memorder to use? */
   n = __atomic_fetch_add(&q->next_frame, nframes, __ATOMIC_RELEASE);
   m = get_framestamp(ctrl);
-  __atomic_store_n (&(q->frame_stamp), m, __ATOMIC_RELEASE);
+  __atomic_store_n(&(q->frame_stamp), m, __ATOMIC_RELEASE);
 #ifdef TRACE
-  printf("ctrl_client n: %ld\n", n);
+  printf("ctrl_client n: %" PRIu64 "\n", n);
   for (int i = 0; i < ctrl->n_clients; i++)
-    printf("   dsp[%d] n: %ld\n", i, dsp_get_next_frame(ctrl->dsp[i]));
+    printf("   dsp[%d] n: %" PRIu64 "\n", i, dsp_get_next_frame(ctrl->dsp[i]));
 #endif
   if (!ctrl->syncronized)
   {
@@ -128,7 +128,7 @@ int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
       dsp_set_next_frame(ctrl->dsp[i], n);
     ctrl->syncronized = 1;
   }
-    
+
   slot_idx = (n / q->buffer_size) & (q->n_slots - 1);
 
   /* TODO: check how this must be handled, memorder? */
@@ -137,7 +137,7 @@ int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
 #ifdef TRACE
   if (fof)
   {
-    printf("Has fof: %p @ n: %ld\n", fof, n);
+    printf("Has fof: %p @ n: %" PRIu64 "\n", (void *)fof, n);
     fof_print(fof);
   }
 #endif
@@ -158,41 +158,40 @@ int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
   ctrl->last_dsp = i;
   if (q->first_fof != NULL)
   {
-    //printf("mix_client_process release fofs\n");
+    // printf("mix_client_process release fofs\n");
     fof_queue_free_fofs(q, q->first_fof, q->last_fof);
-    
-#ifdef xxx//DEBUG_ENABLE
+
+#ifdef xxx // DEBUG_ENABLE
     fprintf(stderr, "Debug: free: %d active: %d sum: %d\n", q->free_cnt, q->active_cnt, q->free_cnt + q->active_cnt);
-    //if (q->free_cnt != q->max_fofs - q->active_cnt)
-    //  fprintf(stderr, "Debug: Memory leak in ctrl_client_process detected!\n");
+    // if (q->free_cnt != q->max_fofs - q->active_cnt)
+    //   fprintf(stderr, "Debug: Memory leak in ctrl_client_process detected!\n");
 #endif
-    
+
     q->first_fof = NULL;
     q->last_fof = NULL;
-    
+
 #ifdef DEBUG_ENABLE
     int i = 0;
     int cnt = 0;
     i = check_free_list(q, &cnt, 1);
     if (i != 0)
       printf("Debug: free_list integrity check(zero is good): %d free count: %d\n",
-	     i, cnt);
+             i, cnt);
 #endif
-    
   }
   /* the fofs are added to the free list by the mix_client, this
-   * allows the dsp_clients to compute the fof data for the fofs 
+   * allows the dsp_clients to compute the fof data for the fofs
    * library.
    * The assumption is that ctrl and mix clients do not overlap
-   * but it seams like they do. 
+   * but it seams like they do.
    */
   ADD_CTRL_ENTRY_CNT(-1);
-  return 0;      
+  return 0;
 }
 
-int ctrl_client_xrun_cb(void* arg)
+int ctrl_client_xrun_cb(void *arg)
 {
-  ctrl_client_t* ctrl = (ctrl_client_t*) arg;
+  ctrl_client_t *ctrl = (ctrl_client_t *)arg;
 
   ctrl->xruns++;
   if (ctrl->xrun_limit && ctrl->xruns >= ctrl->xrun_limit)
@@ -202,9 +201,9 @@ int ctrl_client_xrun_cb(void* arg)
   }
   return 0;
 }
-int ctrl_client_buffer_size_cb(jack_nframes_t size, void* arg)
+int ctrl_client_buffer_size_cb(jack_nframes_t size, void *arg)
 {
-  ctrl_client_t* ctrl = (ctrl_client_t*) arg;
-  
+  (void)size;
+  (void)arg;
+  return 0;
 }
-	

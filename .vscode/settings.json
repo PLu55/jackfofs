@@ -6,5 +6,9 @@
         "debug.h": "c",
         "jfofs.h": "c",
         "jfofs_private.h": "c"
+    },
+    "chat.tools.terminal.autoApprove": {
+        "ctest": true,
+        "./jfofs_test": true
     }
 }

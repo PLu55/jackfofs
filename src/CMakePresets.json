@@ -1,0 +1,79 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build (separate build dir)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/../build-debug",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+        "CMAKE_BUILD_TYPE": "Debug",
+        "DEBUG_ENABLE": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Optimized release build (separate build dir)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/../build-release",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+        "CMAKE_BUILD_TYPE": "Release",
+        "DEBUG_ENABLE": "OFF"
+      }
+    },
+    {
+      "name": "relwithdebinfo",
+      "displayName": "RelWithDebInfo",
+      "description": "Optimized build with debug symbols (separate build dir)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/../build-relwithdebinfo",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "DEBUG_ENABLE": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "jobs": 0
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "jobs": 0
+    },
+    {
+      "name": "relwithdebinfo",
+      "configurePreset": "relwithdebinfo",
+      "jobs": 0
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

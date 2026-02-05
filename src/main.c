@@ -11,20 +11,19 @@
 const char *argp_program_version = PROJECT_NAME_VER;
 
 static char doc[] =
-  "jfofs is a jack client program that is a parallel fof synthesizer";
+    "jfofs is a jack client program that is a parallel fof synthesizer";
 
 static struct argp_option options[] = {
-  {"verbose",     'v', 0,       0, "Produce verbose output" },
-  {"mode",        'm', "mode",  0,
-   "Fof mode: 1: mono, 2: stereo 3: quad: 4: ambiO1 5: ambi01D, default is 1" },
-  {"n_clients",   'n', "n",     0, "number of parallel clients, default is 1" },
-  {"n_fofs",      'p', "n",     0, "number of preallocated fofs in libfofs, default is 10240" },
-  {"n_slots",     's', "n",     0, "number of slots in circular queue, default is 32" },
-  {"n_max_fofs",  'q', "n",     0, "maximum number of fofs in queue, default is 1024" },
-  {"trace_level", 't', "trace", 0, "sets the trace level, default is 0"},
-  {"xrun_limit",  'x', "n",     0, "terminates the server if more xruns then the limit, 0 is no limit" },
-  { 0 }
-};
+    {"verbose", 'v', 0, 0, "Produce verbose output", 0},
+    {"mode", 'm', "mode", 0,
+     "Fof mode: 1: mono, 2: stereo 3: quad: 4: ambiO1 5: ambi01D, default is 1", 0},
+    {"n_clients", 'n', "n", 0, "number of parallel clients, default is 1", 0},
+    {"n_fofs", 'p', "n", 0, "number of preallocated fofs in libfofs, default is 10240", 0},
+    {"n_slots", 's', "n", 0, "number of slots in circular queue, default is 32", 0},
+    {"n_max_fofs", 'q', "n", 0, "maximum number of fofs in queue, default is 1024", 0},
+    {"trace_level", 't', "trace", 0, "sets the trace level, default is 0", 0},
+    {"xrun_limit", 'x', "n", 0, "terminates the server if more xruns then the limit, 0 is no limit", 0},
+    {0, 0, 0, 0, 0, 0}};
 
 struct arguments
 {
@@ -39,36 +38,36 @@ struct arguments
 };
 
 static error_t
-parse_opt (int key, char *arg, struct argp_state *state)
+parse_opt(int key, char *arg, struct argp_state *state)
 {
   struct arguments *arguments = state->input;
 
   switch (key)
-    {
-    case 'v':
-      arguments->verbose = 1;
-      break;
-    case 'm':
-      arguments->mode = atoi(arg);
-      break;
-    case 'n':
-      arguments->n_clients = atoi(arg);
-      break;
-    case 'p':
-      arguments->n_fofs = atoi(arg);
-      break;
-    case 's':
-      arguments->n_slots = atoi(arg);
-      break;
-    case 'q':
-      arguments->n_max_fofs = atoi(arg);
-      break;
-    case 't':
-      arguments->trace_level = atoi(arg);
-      break;
-    case 'x':
-      arguments->xrun_limit = atoi(arg);
-      break;
+  {
+  case 'v':
+    arguments->verbose = 1;
+    break;
+  case 'm':
+    arguments->mode = atoi(arg);
+    break;
+  case 'n':
+    arguments->n_clients = atoi(arg);
+    break;
+  case 'p':
+    arguments->n_fofs = atoi(arg);
+    break;
+  case 's':
+    arguments->n_slots = atoi(arg);
+    break;
+  case 'q':
+    arguments->n_max_fofs = atoi(arg);
+    break;
+  case 't':
+    arguments->trace_level = atoi(arg);
+    break;
+  case 'x':
+    arguments->xrun_limit = atoi(arg);
+    break;
 
 #if 0
     case ARGP_KEY_ARG:
@@ -86,15 +85,15 @@ parse_opt (int key, char *arg, struct argp_state *state)
         argp_usage (state);
       break;
 #endif
-    default:
-      return ARGP_ERR_UNKNOWN;
-    }
+  default:
+    return ARGP_ERR_UNKNOWN;
+  }
   return 0;
 }
 
-static struct argp argp = { options, parse_opt, 0, doc };
+static struct argp argp = {options, parse_opt, 0, doc, 0, 0, 0};
 
-static manager_t* mgr = NULL;
+static manager_t *mgr = NULL;
 
 static void exit_handler(int status)
 {
@@ -108,7 +107,7 @@ static void exit_handler(int status)
     int istat;
     istat = CHECK_FREE_LIST(&(mgr->shmem->q), &cnt, 1);
     printf("Fof free list integrity:\n   status: %d\n   fof cnt: %d/%d\n",
-	   istat, cnt, mgr->shmem->setup.n_max_fofs);
+           istat, cnt, mgr->shmem->setup.n_max_fofs);
 #endif
     manager_deactivate_clients(mgr);
     manager_free(mgr);
@@ -117,27 +116,28 @@ static void exit_handler(int status)
   exit(status != 0);
 }
 
-static void termination_handler (int signum)
+static void termination_handler(int signum)
 {
+  (void)signum;
   fprintf(stderr, "Terminating!\n");
 #ifdef STATISTICS_ENABLE
-  
+
   if (signum == SIGTSTP)
   {
-    statistics_t* stats = &(mgr->shmem->statistics);
+    statistics_t *stats = &(mgr->shmem->statistics);
     int sum = 0;
     for (int i = 0; i < stats->n_slots; i++)
       sum += stats->slot_cnt[i];
     printf("Dumping statistics:\n");
-    printf("total: %d\n", sum +  stats->late_cnt + stats->excess_cnt);
+    printf("total: %d\n", sum + stats->late_cnt + stats->excess_cnt);
     printf("excluding late and excess: %d\n", sum);
-    printf("late: %d\n", stats->late_cnt );
-    printf("excess: %d\n", stats->excess_cnt );
+    printf("late: %d\n", stats->late_cnt);
+    printf("excess: %d\n", stats->excess_cnt);
     for (int i = 0; i < stats->n_slots; i++)
       printf("slot[%d]: %d\n", i + 1, stats->slot_cnt[i]);
   }
 #endif
-  
+
 #ifdef DEBUG_ENABLE
   if (signum == SIGTSTP)
   {
@@ -145,14 +145,14 @@ static void termination_handler (int signum)
     int cnt = 0;
     i = check_free_list(mgr->q, &cnt, 1);
     printf("Debug: free_list integrity check(zero is good): %d free count: %d\n",
-	      i, cnt);
+           i, cnt);
   }
 #endif
 
   exit_handler(1);
 }
 
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
   struct arguments arguments;
   setup_t setup;
@@ -166,18 +166,18 @@ int main (int argc, char **argv)
   new_action.sa_flags = 0;
 
   /* ^\ generats a core dump */
-  sigaction (SIGINT, NULL, &old_action);      /* ^C */
+  sigaction(SIGINT, NULL, &old_action); /* ^C */
   if (old_action.sa_handler != SIG_IGN)
-    sigaction (SIGINT, &new_action, NULL);
-  sigaction (SIGHUP, NULL, &old_action);       
-  if (old_action.sa_handler != SIG_IGN)       /* doen't work */
-    sigaction (SIGHUP, &new_action, NULL);
-  sigaction (SIGTERM, NULL, &old_action);
+    sigaction(SIGINT, &new_action, NULL);
+  sigaction(SIGHUP, NULL, &old_action);
+  if (old_action.sa_handler != SIG_IGN) /* doen't work */
+    sigaction(SIGHUP, &new_action, NULL);
+  sigaction(SIGTERM, NULL, &old_action);
   if (old_action.sa_handler != SIG_IGN)
-    sigaction (SIGTERM, &new_action, NULL);
-  sigaction (SIGTSTP, NULL, &old_action);     
+    sigaction(SIGTERM, &new_action, NULL);
+  sigaction(SIGTSTP, NULL, &old_action);
   if (old_action.sa_handler != SIG_IGN)
-    sigaction (SIGTSTP, &new_action, NULL);   /* ^Z */
+    sigaction(SIGTSTP, &new_action, NULL); /* ^Z */
 
   arguments.verbose = 0;
   arguments.mode = 1;
@@ -187,35 +187,39 @@ int main (int argc, char **argv)
   arguments.n_slots = 32;
   arguments.trace_level = 0;
   arguments.xrun_limit = 0;
-  
-  argp_parse (&argp, argc, argv, 0, 0, &arguments);
+
+  argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
   setup.mode = arguments.mode;
   setup.n_clients = arguments.n_clients;
-  setup.n_preallocate_fofs =  arguments.n_fofs;
-  setup.n_slots =  arguments.n_slots;
+  setup.n_preallocate_fofs = arguments.n_fofs;
+  setup.n_slots = arguments.n_slots;
   setup.n_max_fofs = arguments.n_max_fofs;
   setup.fofs_trace_level = arguments.trace_level;
   setup.xrun_limit = arguments.xrun_limit;
   setup.verbose = arguments.verbose;
 
 #ifdef HAS_PIPEWIRE
-  char* rate = pipewire_query("default.clock.rate");
-  char* buffer = pipewire_query("default.clock.max-quantum");
+  char *rate = pipewire_query("default.clock.rate");
+  char *buffer = pipewire_query("default.clock.max-quantum");
   if (rate == NULL || buffer == NULL)
   {
     printf("Couldn't get the sample rate or buffer size from pipewire!\n");
+    free(rate);
+    free(buffer);
     exit_handler(1);
   }
-  setup.sample_rate = atoi(pipewire_query(rate));
-  setup.max_buffer_size = atoi(pipewire_query(buffer));
+  setup.sample_rate = atoi(rate);
+  setup.max_buffer_size = atoi(buffer);
+  free(rate);
+  free(buffer);
 #else
   setup.sample_rate = 48000;
   setup.max_buffer_size = 1024;
 #endif
 
   mgr = manager_create(&setup, &status);
-  
+
   if (mgr == NULL)
   {
     printf("Couldn't start the jfofs manager, status: %d!\n", status);
@@ -225,12 +229,12 @@ int main (int argc, char **argv)
   if (setup.verbose > 0)
   {
     printf("jfofs manager started!\n");
-    printf("mgr: %p\n", mgr );
-    printf("shmem: %p\n", mgr->shmem );
+    printf("mgr: %p\n", (void *)mgr);
+    printf("shmem: %p\n", (void *)mgr->shmem);
   }
 
   sleep(-1);
-    
+
   exit_handler(0);
   return 0;
 }

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h> /* debug */
 #include <jack/jack.h>
-#include <fcntl.h> /* Defines O_* constants */
+#include <fcntl.h>    /* Defines O_* constants */
 #include <sys/stat.h> /* Defines mode constants */
 #include <sys/mman.h>
 #include <semaphore.h>
@@ -20,17 +20,17 @@
 // jack_set_buffer_size_callback()
 // jack_set_sample_rate_callback()
 
-manager_t* manager_create(setup_t* setup, int *status)
+manager_t *manager_create(setup_t *setup, int *status)
 {
-  manager_t* mgr;
-  shmem_t* shmem;
-  
+  manager_t *mgr;
+  shmem_t *shmem;
+
   shmem = shmem_create(setup, status);
   if (shmem == NULL)
   {
     return NULL;
   }
-  
+
   mgr = manager_new(shmem, setup, status);
 
   if (mgr == NULL)
@@ -48,46 +48,45 @@ manager_t* manager_create(setup_t* setup, int *status)
   }
 
   *status = manager_connect_clients(mgr);
-  
+
   if (*status != 0)
   {
     manager_free(mgr);
     return NULL;
   }
-  
+
   return mgr;
 }
 
-manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status)
+manager_t *manager_new(shmem_t *shmem, setup_t *setup, int *status)
 {
-  manager_t* mgr;
+  manager_t *mgr = NULL;
 
-  *status = posix_memalign((void**) &mgr, CACHE_LINE_SIZE, sizeof(manager_t));
+  *status = posix_memalign((void **)&mgr, CACHE_LINE_SIZE, sizeof(manager_t));
 
-  if (mgr == NULL)
+  if (*status != 0 || mgr == NULL)
   {
     return NULL;
   }
 
-  memset((char*) mgr, 0, sizeof(manager_t));
-  memcpy((char*) &(mgr->setup), (char*) setup, sizeof(setup_t));
+  memset((char *)mgr, 0, sizeof(manager_t));
+  memcpy((char *)&(mgr->setup), (char *)setup, sizeof(setup_t));
 
   mgr->shmem = shmem;
   mgr->q = &(shmem->q);
   mgr->ctrl = ctrl_client_new(setup, mgr->q, status);
   mgr->mix = mix_client_new(fof_ModeToChannels(setup->mode), mgr->q, status);
   mgr->mix->q = mgr->q;
-  
+
   setup->sample_rate = jack_get_sample_rate(mgr->ctrl->j_client);
   setup->max_buffer_size = jack_get_buffer_size(mgr->ctrl->j_client);
 
   fof_queue_init(mgr->q, setup);
-  
-  printf("manager: setup.fof_trace_level: %d\n", setup->fofs_trace_level)
-  ;
+
+  printf("manager: setup.fof_trace_level: %d\n", setup->fofs_trace_level);
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    dsp_client_t* dsp = dsp_client_new(setup, i, status);
+    dsp_client_t *dsp = dsp_client_new(setup, i, status);
     mgr->dsp[i] = dsp;
     mgr->ctrl->dsp[i] = dsp;
   }
@@ -95,20 +94,25 @@ manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status)
   return mgr;
 }
 
-void manager_free(manager_t* mgr)
+void manager_free(manager_t *mgr)
 {
-  //shm_unlink(SHMEM_NAME);
-  if (mgr->ctrl != NULL)
-    ctrl_client_free(mgr->ctrl);
+  if (mgr == NULL)
+    return;
+
+  (void)manager_deactivate_clients(mgr);
+
+  if (mgr->mix != NULL)
+    mix_client_free(mgr->mix);
 
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    if (mgr->dsp[i] != NULL) 
+    if (mgr->dsp[i] != NULL)
       dsp_client_free(mgr->dsp[i]);
   }
-  if (mgr->mix != NULL)
-    mix_client_free(mgr->mix);
-  
+
+  if (mgr->ctrl != NULL)
+    ctrl_client_free(mgr->ctrl);
+
   shm_unlink(SHMEM_NAME);
   free(mgr);
 }
@@ -118,17 +122,17 @@ inline jfofs_time_t systime()
   struct timespec tspec;
 
   clock_gettime(CLOCK_REALTIME, &tspec);
-  return (jfofs_time_t) tspec.tv_sec * TIME_1  + (jfofs_time_t) tspec.tv_nsec * 1000;
+  return (jfofs_time_t)tspec.tv_sec * TIME_1 + (jfofs_time_t)tspec.tv_nsec * 1000;
 }
 
-int manager_activate_clients(manager_t* mgr)
+int manager_activate_clients(manager_t *mgr)
 {
   int status;
 
   status = mix_client_activate(mgr->mix);
   if (status)
-      return status;
-   
+    return status;
+
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     status = dsp_client_activate(mgr->dsp[i]);
@@ -139,15 +143,15 @@ int manager_activate_clients(manager_t* mgr)
   return ctrl_client_activate(mgr->ctrl);
 }
 
-int manager_deactivate_clients(manager_t* mgr)
+int manager_deactivate_clients(manager_t *mgr)
 {
   int status;
 
-  status = ctrl_client_deactivate(mgr->ctrl) ;
+  status = ctrl_client_deactivate(mgr->ctrl);
 
   if (status)
-      return status;
-  
+    return status;
+
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     status = dsp_client_deactivate(mgr->dsp[i]);
@@ -158,15 +162,15 @@ int manager_deactivate_clients(manager_t* mgr)
   return mix_client_deactivate(mgr->mix);
 }
 
-int manager_connect_clients(manager_t* mgr)
+int manager_connect_clients(manager_t *mgr)
 {
   int status;
-  
+
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
     status = jack_connect(mgr->ctrl->j_client,
-			  jack_port_name(mgr->ctrl->port),
-			  jack_port_name(mgr->dsp[i]->in_port));
+                          jack_port_name(mgr->ctrl->port),
+                          jack_port_name(mgr->dsp[i]->in_port));
 
     if (status)
       return status;
@@ -174,19 +178,19 @@ int manager_connect_clients(manager_t* mgr)
 
   for (int i = 0; i < mgr->setup.n_clients; i++)
   {
-    dsp_client_t* dsp = mgr->dsp[i];
+    dsp_client_t *dsp = mgr->dsp[i];
 
     for (int j = 0; j < dsp->n_chans; j++)
     {
       status = jack_connect(dsp->j_client,
-			    jack_port_name(dsp->out_port[j]),
-			    jack_port_name(mgr->mix->in_port[j]));
+                            jack_port_name(dsp->out_port[j]),
+                            jack_port_name(mgr->mix->in_port[j]));
 
       if (status)
-	      return status;
+        return status;
     }
   }
-  
+
   return JFOFS_SUCCESS;
 }
 

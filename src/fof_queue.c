@@ -140,15 +140,13 @@ void fof_queue_free_fofs(fof_queue_t *q, fof_t *head, fof_t *tail)
   CHECK_FOF_ADDR(tail);
 }
 
-static inline void set_fof(fof_t *fof, uint64_t time_us, float *argv)
+static inline void set_fof(fof_t *fof, uint64_t time_us, const float *argv)
 {
   fof->time_us = time_us;
   memcpy((char *)&(fof->argv), (char *)argv, FOF_NUMARGS * sizeof(float));
 }
 
-int fof_queue_add(fof_queue_t *q, uint64_t time_us, float ampl, float freq,
-                  float gliss, float phi, float beta, float alpha, float amin,
-                  float cutoff, float pan1, float pan2, float pan3)
+int fof_queue_add(fof_queue_t *q, uint64_t time_us, const float *argv)
 {
   fof_t *fof;
   int status;
@@ -165,8 +163,6 @@ int fof_queue_add(fof_queue_t *q, uint64_t time_us, float ampl, float freq,
 
   start_frame = jfofs_time_to_nframes(time_us, q->sample_rate);
 
-  float argv[FOF_NUMARGS] = {
-      ampl, freq, gliss, phi, beta, alpha, amin, cutoff, pan1, pan2, pan3};
   set_fof(fof, time_us, argv);
 
   next_frame = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);

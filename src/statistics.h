@@ -23,6 +23,7 @@ void incr_excess_cnt();
 void dump_statistics(void);
 
 #define STATISTICS_T(var) statistics_t var
+#define STATISTICS_FIELD(var) statistics_t var;
 #define HAS_STATISTICS 1
 #define STATISTICS_INIT statistics_init()
 #define INCR_SLOT_CNT(slot) incr_slot_cnt(slot)
@@ -33,6 +34,7 @@ void dump_statistics(void);
 #else
 
 #define STATISTICS_T(var)
+#define STATISTICS_FIELD(var)
 #define HAS_STATISTICS 0
 #define STATISTICS_INIT
 #define INCR_SLOT_CNT(slot)
@@ -42,7 +44,4 @@ void dump_statistics(void);
 
 #endif
 
-
-
 #endif
-

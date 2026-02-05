@@ -3,7 +3,7 @@
 
 #ifdef HAS_PIPEWIRE
 
-extern char* pipewire_query(char* query);
+char *pipewire_query(const char *query);
 
 #endif
 

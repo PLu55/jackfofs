@@ -16,12 +16,12 @@ void test_fof_queue_add(void)
 {
   int status;
   setup_t setup;
-  shmem_t* shmem;
-  fof_queue_t* q;
-  fof_t* fof;
+  shmem_t *shmem;
+  fof_queue_t *q;
+  fof_t *fof;
   fof_t fof_in;
   uint64_t t;
-    
+
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
@@ -32,10 +32,10 @@ void test_fof_queue_add(void)
 
   shmem = shmem_create(&setup, &status);
   TEST_ASSERT_NOT_NULL(shmem);
-  
+
   q = &(shmem->q);
   fof_queue_init(q, &setup);
-  
+
   fof_default(&fof_in);
   status = fof_queue_add(q, 0UL, fof_in.argv);
   TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
@@ -69,14 +69,14 @@ void test_fof_queue_init(void)
 {
   int status;
   setup_t setup;
-  shmem_t* shmem;
-  fof_queue_t* q;
-  fof_t* fof;
+  shmem_t *shmem;
+  fof_queue_t *q;
+  fof_t *fof;
   int i;
   size_t mem_size;
   size_t slots_off;
   size_t fofs_off;
-  
+
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
@@ -86,15 +86,15 @@ void test_fof_queue_init(void)
   setup.max_buffer_size = 256;
 
 #ifdef VERBOSE_ENABLE
-  printf("page size: %d\n",  getpagesize());
-  printf(" sizeof(fof_t): %ld\n",  sizeof(fof_t));
-  printf(" sizeof(shmem_t): %ld\n",  sizeof(shmem_t));
+  printf("page size: %d\n", getpagesize());
+  printf(" sizeof(fof_t): %zu\n", sizeof(fof_t));
+  printf(" sizeof(shmem_t): %zu\n", sizeof(shmem_t));
 #endif
-  TEST_ASSERT_EQUAL_PTR((char*)0x7f61667f3000UL,
-			shmem_aligning_ptr((char*)0x7f61667f3000UL, 64UL));
-  TEST_ASSERT_EQUAL_PTR((char*)0x7f61667f3040UL,
-			shmem_aligning_ptr((char*)0x7f61667f3017UL, 64UL));
-  
+  TEST_ASSERT_EQUAL_PTR((char *)0x7f61667f3000UL,
+                        shmem_aligning_ptr((char *)0x7f61667f3000UL, 64UL));
+  TEST_ASSERT_EQUAL_PTR((char *)0x7f61667f3040UL,
+                        shmem_aligning_ptr((char *)0x7f61667f3017UL, 64UL));
+
   shmem = shmem_create(&setup, &status);
   TEST_ASSERT_NOT_NULL(shmem);
 
@@ -103,9 +103,9 @@ void test_fof_queue_init(void)
   mem_size = shmem_layout(&setup, &slots_off, &fofs_off);
 
 #ifdef VERBOSE_ENABLE
-  printf("mem_size: %ld slots_off: %ld fofs_off: %ld\n", mem_size, slots_off, fofs_off);
-  printf("shmem: %p %p %p %p\n", shmem, (char*)shmem + slots_off,
-	 (char*)shmem + fofs_off,  (char*)shmem + mem_size);
+  printf("mem_size: %zu slots_off: %zu fofs_off: %zu\n", mem_size, slots_off, fofs_off);
+  printf("shmem: %p %p %p %p\n", (void *)shmem, (void *)((char *)shmem + slots_off),
+         (void *)((char *)shmem + fofs_off), (void *)((char *)shmem + mem_size));
 #endif
 
   fof_queue_init(q, &setup);
@@ -119,9 +119,9 @@ void test_fof_queue_init(void)
   TEST_ASSERT_NULL(q->excess);
   TEST_ASSERT_NOT_NULL(q->free_fofs);
   TEST_ASSERT_NOT_NULL(q->slot);
-  TEST_ASSERT_EQUAL_PTR((char*)shmem + slots_off, q->slot);
-  TEST_ASSERT_EQUAL_PTR((char*)shmem + fofs_off, q->free_fofs);
-  
+  TEST_ASSERT_EQUAL_PTR((char *)shmem + slots_off, q->slot);
+  TEST_ASSERT_EQUAL_PTR((char *)shmem + fofs_off, q->free_fofs);
+
   for (i = 0; i < setup.n_slots; i++)
   {
     TEST_ASSERT_NULL(q->slot[i]);
@@ -129,12 +129,12 @@ void test_fof_queue_init(void)
 
   fof = q->free_fofs;
   i = 0;
-  while(fof)
+  while (fof)
   {
     i++;
     if (i > setup.n_max_fofs)
       break;
-    TEST_ASSERT_TRUE((char*)fof + sizeof(fof_t) <= (char*)shmem + mem_size);
+    TEST_ASSERT_TRUE((char *)fof + sizeof(fof_t) <= (char *)shmem + mem_size);
     fof = fof->next;
   }
   TEST_ASSERT_EQUAL_INT(setup.n_max_fofs, i);
@@ -157,7 +157,7 @@ void test_fof_queue_init(void)
   }
   fclose(f);
 #endif
-  
+
   return;
 }
 
@@ -165,12 +165,12 @@ void test_fof_queue_free_list(void)
 {
   int status;
   setup_t setup;
-  shmem_t* shmem;
-  fof_queue_t* q;
-  fof_t* fof;
-  fof_t* fof_2;
-  fof_t* fof_3;
-  
+  shmem_t *shmem;
+  fof_queue_t *q;
+  fof_t *fof;
+  fof_t *fof_2;
+  fof_t *fof_3;
+
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
@@ -219,7 +219,7 @@ void test_fof_queue_free_list(void)
 
   fof = q->free_fofs;
   int i = 0;
-  while(fof)
+  while (fof)
   {
     fof = fof->next;
     i++;

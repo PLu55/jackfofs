@@ -1,5 +1,3 @@
-# jack_fofs
-
 ## fof_queue
 
 Fof\_queue is a circular array of slots where each slot holds a number
@@ -18,23 +16,21 @@ activation time of the fof.
 
 ## Lock free design
 
-There are three types of jack clients, the ctrl client which handles
-the fof_queue, the dsp client which handles the signal processing and
-can run in parallel and the mix client which collects the signals from
-the parallel dsp clients and frees the fof data. The dsp clients keep
-it's own data which is handled by the fofs library.
+There are three types of jack clients, the ctrl client which handles the
+fof_queue, the dsp client which handles the signal processing and can run in
+parallel and the mix client which collects the signals from the parallel dsp
+clients and frees the fof data. The dsp clients keep it's own data which is
+handled by the fofs library.
 
-The jack clients are connected and therby a computational order is
-imposed, the ctrl client runs first then the dsp clients all in
-parallel and last the mix client. With this construct it's not need to
-lock any data. The only sycronisation needed is between the fof_queue,
-the ctrl client and the api.
+The jack clients are connected and therby a computational order is imposed, the
+ctrl client runs first then the dsp clients all in parallel and last the mix
+client. With this construct it's not need to lock any data. The only
+synchronization needed is between the fof_queue, the ctrl client and the api.
 
-The api add fofs to the fof_queue which has a number of time slots
-which slot the fof is added to depends on how far into the future the
-start time of the fof is. If it's very close to the current time then
-there is a need to syncronize the queue with the ctrl client,
-otherwise no syncronization is needed.
+The api add fofs to the fof_queue which has a number of time slots which slot
+the fof is added to depends on how far into the future the start time of the fof
+is. If it's very close to the current time then there is a need to synchronize
+the queue with the ctrl client, otherwise no synchronization is needed.
 
 Updating of the current time needs to be syncronized, the ctrl client
 is updating the time of the fof_queue.

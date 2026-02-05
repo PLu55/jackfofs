@@ -8,11 +8,12 @@
 
 typedef struct jfofs_s jfofs_t;
 
+const char *jfofs_version(void);
 jfofs_t *jfofs_new(int *status, shmem_t *shmem);
 void jfofs_free(jfofs_t *jfofs);
-int fof_queue_add(fof_queue_t *q, uint64_t time_us, float ampl, float freq,
-                  float gliss, float phi, float beta, float alpha, float amin,
-                  float cutoff, float pan1, float pan2, float pan3);
+int jfofs_add(jfofs_t *jfofs, uint64_t time_us, float ampl, float freq,
+              float gliss, float phi, float beta, float alpha, float amin,
+              float cutoff, float pan1, float pan2, float pan3);
 jfofs_time_t jfofs_get_time(jfofs_t *jfofs);
 int jfofs_sample_rate(jfofs_t *jfofs);
 int jfofs_buffer_size(jfofs_t *jfofs);

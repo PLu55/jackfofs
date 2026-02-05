@@ -12,26 +12,26 @@ typedef struct manager_s manager_t;
 
 struct manager_s
 {
-  ctrl_client_t* ctrl;
-  dsp_client_t* dsp[MAX_DSP_CLIENTS];
-  mix_client_t* mix;
-  fof_queue_t* q;
+  ctrl_client_t *ctrl;
+  dsp_client_t *dsp[MAX_DSP_CLIENTS];
+  mix_client_t *mix;
+  fof_queue_t *q;
   setup_t setup;
-  shmem_t* shmem;
+  shmem_t *shmem;
 };
 
-static inline void manager_add(manager_t* mgr, jfofs_time_t time_us, float* argv)
+static inline int manager_add(manager_t *mgr, jfofs_time_t time_us, const float *argv)
 {
-  fof_queue_add(mgr->q, time_us, argv);
+  return fof_queue_add(mgr->q, time_us, argv);
 }
 
-manager_t* manager_create(setup_t* setup, int *status);
-manager_t* manager_new(shmem_t* shmem, setup_t* setup, int *status);
-void manager_free(manager_t* mgr);
-int manager_activate_clients(manager_t* mgr);
-int manager_deactivate_clients(manager_t* mgr);
-int manager_connect_clients(manager_t* mgr);
-//void manager_add(manager_t* mgr, fof_t* _fof);
-int manager_create_shmem(manager_t* mgr);
+manager_t *manager_create(setup_t *setup, int *status);
+manager_t *manager_new(shmem_t *shmem, setup_t *setup, int *status);
+void manager_free(manager_t *mgr);
+int manager_activate_clients(manager_t *mgr);
+int manager_deactivate_clients(manager_t *mgr);
+int manager_connect_clients(manager_t *mgr);
+// void manager_add(manager_t* mgr, fof_t* _fof);
+int manager_create_shmem(manager_t *mgr);
 
 #endif
