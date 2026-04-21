@@ -53,6 +53,8 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 find_library(PIPEWIRE pipewire)
 
+pkg_check_modules(SNDFILE REQUIRED sndfile)
+
 if(PIPEWIRE)
   # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAS_PIPEWIRE")
 endif()
@@ -164,6 +166,11 @@ target_sources(jfofs_stress PRIVATE
   stress_main.c
   test_util.c)
 target_link_libraries(jfofs_stress jfofs_api)
+
+add_library(jfofs_offline STATIC)
+target_sources(jfofs_offline PRIVATE offline.c offline.h)
+target_include_directories(jfofs_offline SYSTEM PRIVATE ${SNDFILE_INCLUDE_DIRS} ${FOFSHOME}/src)
+target_link_libraries(jfofs_offline ${SNDFILE_LIBRARIES} ${FOFS_LIB})
 
 # Testing
 include(CTest)
