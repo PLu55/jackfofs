@@ -14,6 +14,11 @@ void test_manager(void);
 void test_mix_client(void);
 void test_api(void);
 void test_shmem(void);
+void test_offline_create_close(void);
+void test_offline_invalid_path(void);
+void test_offline_mono_renders(void);
+void test_offline_stereo_renders(void);
+void test_offline_multiple_fofs(void);
 
 void setUp(void)
 {
@@ -62,6 +67,11 @@ int main(int argc, char **argv)
     RUN_TEST(test_manager);
     // RUN_TEST(test_api);
     // RUN_TEST(test_shmem);
+    RUN_TEST(test_offline_create_close);
+    RUN_TEST(test_offline_invalid_path);
+    RUN_TEST(test_offline_mono_renders);
+    RUN_TEST(test_offline_stereo_renders);
+    RUN_TEST(test_offline_multiple_fofs);
 
     int rc = UNITY_END();
     alarm(0);
