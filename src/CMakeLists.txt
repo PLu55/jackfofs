@@ -108,6 +108,8 @@ set(TEST_SRCS
   api.c
   test_api.c
   test_shmem.c
+  offline.c
+  test_offline.c
 )
 
 set(TEST_HDRS
@@ -149,8 +151,23 @@ install(FILES
 
 add_executable(jfofs_test)
 target_sources(jfofs_test PRIVATE ${TEST_SRCS} ${TEST_HDRS} ${SRCS} ${HDRS})
-target_link_libraries(jfofs_test libunity.a ${LIBS})
+target_include_directories(jfofs_test SYSTEM PRIVATE ${SNDFILE_INCLUDE_DIRS})
+target_link_libraries(jfofs_test libunity.a ${LIBS} ${SNDFILE_LIBRARIES})
 
+# Standalone offline test binary — no JACK dependency.
+add_executable(jfofs_offline_test)
+target_sources(jfofs_offline_test PRIVATE
+  test_offline_main.c
+  test_offline.c
+  offline.c)
+target_include_directories(jfofs_offline_test SYSTEM PRIVATE
+  ${SNDFILE_INCLUDE_DIRS}
+  ${FOFSHOME}/src)
+target_link_libraries(jfofs_offline_test
+  libunity.a
+  ${SNDFILE_LIBRARIES}
+  ${FOFS_LIB}
+  libm.so)
 # add_executable(shmem)
 # target_sources(shmem PRIVATE
 # main_shmem.c
@@ -183,3 +200,6 @@ set_tests_properties(JFOFS_MAIN_TESTING PROPERTIES
   TIMEOUT 60
   ENVIRONMENT "JFOFS_TEST_TIMEOUT=60"
 )
+
+add_test(NAME OFFLINE_TESTING COMMAND jfofs_offline_test)
+set_tests_properties(OFFLINE_TESTING PROPERTIES TIMEOUT 30)
