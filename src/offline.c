@@ -5,8 +5,9 @@
 #include <sndfile.h>
 #include <fofs.h>
 
+#include "config.h"
 #include "jfofs_private.h"
-#include "offline.h"
+#include "jfofs_offline.h"
 
 struct offline_job_s
 {
@@ -20,33 +21,43 @@ struct offline_job_s
   uint64_t frame_count;
 };
 
-offline_job_t *offline_job_create(const char *path, const setup_t *setup,
-                                  int block_size, int *status)
+const char *jfofs_offline_version(void)
 {
-  offline_job_t *job = NULL;
+  return PROJECT_NAME_VER;
+}
+
+jfofs_offline_job_t *jfofs_offline_create(const char *path,
+                                          int sample_rate,
+                                          int mode,
+                                          int n_preallocate_fofs,
+                                          int fofs_trace_level,
+                                          int block_size,
+                                          int *status)
+{
+  jfofs_offline_job_t *job = NULL;
   int n_chans;
   SF_INFO sf_info;
 
   *status = JFOFS_MEMORY_ERROR;
 
-  job = calloc(1, sizeof(offline_job_t));
+  job = calloc(1, sizeof(jfofs_offline_job_t));
   if (job == NULL)
     return NULL;
 
-  n_chans = fof_ModeToChannels(setup->mode);
+  n_chans = fof_ModeToChannels(mode);
   job->n_chans = n_chans;
   job->block_size = block_size;
   job->frame_count = 0;
 
-  job->fof_bank = fof_newBank(setup->sample_rate, setup->mode,
-                              setup->n_preallocate_fofs, block_size);
+  job->fof_bank = fof_newBank(sample_rate, mode,
+                              n_preallocate_fofs, block_size);
   if (job->fof_bank == NULL)
   {
     free(job);
     return NULL;
   }
 
-  fof_set_trace_level(setup->fofs_trace_level);
+  fof_set_trace_level(fofs_trace_level);
 
   /* allocate per-channel buffers */
   for (int i = 0; i < n_chans; i++)
@@ -63,7 +74,7 @@ offline_job_t *offline_job_create(const char *path, const setup_t *setup,
   }
 
   /* interleaved scratch buffer for sndfile */
-  job->interleaved = calloc((size_t)(block_size * n_chans), sizeof(float));
+  job->interleaved = calloc((size_t)block_size * (size_t)n_chans, sizeof(float));
   if (job->interleaved == NULL)
   {
     for (int i = 0; i < n_chans; i++)
@@ -75,7 +86,7 @@ offline_job_t *offline_job_create(const char *path, const setup_t *setup,
 
   /* open output file */
   memset(&sf_info, 0, sizeof(sf_info));
-  sf_info.samplerate = setup->sample_rate;
+  sf_info.samplerate = sample_rate;
   sf_info.channels = n_chans;
   sf_info.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;
 
@@ -98,17 +109,20 @@ offline_job_t *offline_job_create(const char *path, const setup_t *setup,
   return job;
 }
 
-int offline_job_add(offline_job_t *job, uint64_t time_us, const float *argv)
+int jfofs_offline_add(jfofs_offline_job_t *job, uint64_t time_us,
+                      const float *argv)
 {
-  return fof_add_v(job->fof_bank, time_us, argv);
+  return fof_add_v(job->fof_bank, time_us, (float *)argv);
 }
 
-int offline_job_process(offline_job_t *job)
+int jfofs_offline_process(jfofs_offline_job_t *job)
 {
   sf_count_t written;
 
+#ifdef JFOFS_USE_NEXTI
+  fof_nextI(job->fof_bank, (unsigned int)job->block_size, job->interleaved);
+#else
   fof_next(job->fof_bank, (unsigned int)job->block_size, job->ch_buf);
-
   /* interleave per-channel buffers for sndfile */
   for (int f = 0; f < job->block_size; f++)
   {
@@ -117,6 +131,7 @@ int offline_job_process(offline_job_t *job)
       job->interleaved[f * job->n_chans + c] = job->ch_buf[c][f];
     }
   }
+#endif
 
   written = sf_writef_float(job->sf, job->interleaved, (sf_count_t)job->block_size);
   if (written != (sf_count_t)job->block_size)
@@ -130,7 +145,7 @@ int offline_job_process(offline_job_t *job)
   return JFOFS_SUCCESS;
 }
 
-void offline_job_close(offline_job_t *job)
+void jfofs_offline_close(jfofs_offline_job_t *job)
 {
   if (job == NULL)
     return;

@@ -9,6 +9,8 @@
     },
     "chat.tools.terminal.autoApprove": {
         "ctest": true,
-        "./jfofs_test": true
+        "./jfofs_test": true,
+        "gdb": true,
+        "valgrind": true
     }
 }

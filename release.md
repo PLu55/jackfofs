@@ -1,5 +1,11 @@
 # Release changelog
 
+## 4.2.0 - 2026-04-21
+
+* Added offline processing capabilities to the library.
+* New API functions in `fofs_offline.h` for batch processing of audio files.
+* New library is build: `libfofs_offline.a` for offline processing.
+
 ## 4.1.1 - 2026-02-05
 
 * API changed: Modified `jfofs_add()` function signature.

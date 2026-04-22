@@ -8,25 +8,32 @@
 #include <sndfile.h>
 #include <fofs.h>
 
-#include "offline.h"
+#include "jfofs_offline.h"
 
 #define OFFLINE_TMP_MONO   "/tmp/jfofs_test_offline_mono.wav"
 #define OFFLINE_TMP_STEREO "/tmp/jfofs_test_offline_stereo.wav"
 #define OFFLINE_TMP_MULTI  "/tmp/jfofs_test_offline_multi.wav"
 
-/* Build a minimal setup_t for offline tests. */
-static setup_t make_offline_setup(int mode, int sample_rate)
+/*
+ * jfofs_offline_setup_t - parameters for an offline rendering job.
+ */
+typedef struct jfofs_offline_setup_s
 {
-  setup_t s;
+  int sample_rate;        /* samples per second, e.g. 48000        */
+  int mode;               /* FOF mode (defines channel count)       */
+  int n_preallocate_fofs; /* number of pre-allocated FOF voices     */
+  int fofs_trace_level;   /* trace verbosity level for libfofs      */
+} jfofs_offline_setup_t;
+
+/* Build a minimal jfofs_offline_setup_t for offline tests. */
+static jfofs_offline_setup_t make_offline_setup(int mode, int sample_rate)
+{
+  jfofs_offline_setup_t s;
   memset(&s, 0, sizeof(s));
   s.mode               = mode;
-  s.fofs_trace_level   = 0;
-  s.n_clients          = 1;
+  s.fofs_trace_level = 0;
   s.n_preallocate_fofs = 64;
-  s.n_max_fofs         = 64;
-  s.n_slots            = 32;
-  s.sample_rate        = sample_rate;
-  s.max_buffer_size    = 256;
+  s.sample_rate = sample_rate;
   return s;
 }
 
@@ -51,15 +58,21 @@ static void default_argv(float *argv)
 /* Basic create/close round-trip: file must be created and no crash on close. */
 void test_offline_create_close(void)
 {
-  setup_t setup = make_offline_setup(FOF_MONO, 44100);
+  jfofs_offline_setup_t setup = make_offline_setup(FOF_MONO, 44100);
   int status;
 
-  offline_job_t *job = offline_job_create(OFFLINE_TMP_MONO, &setup, 256, &status);
+  jfofs_offline_job_t *job = jfofs_offline_create(OFFLINE_TMP_MONO,
+                                                  setup.sample_rate,
+                                                  setup.mode,
+                                                  setup.n_preallocate_fofs,
+                                                  setup.fofs_trace_level,
+                                                  256,
+                                                  &status);
 
   TEST_ASSERT_NOT_NULL(job);
   TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
 
-  offline_job_close(job);
+  jfofs_offline_close(job);
 
   /* output file must exist after close */
   TEST_ASSERT_EQUAL_INT(0, access(OFFLINE_TMP_MONO, F_OK));
@@ -71,11 +84,16 @@ void test_offline_create_close(void)
 /* Creating a job with an unwritable path must fail gracefully. */
 void test_offline_invalid_path(void)
 {
-  setup_t setup = make_offline_setup(FOF_MONO, 44100);
+  jfofs_offline_setup_t setup = make_offline_setup(FOF_MONO, 44100);
   int status = JFOFS_SUCCESS;
 
-  offline_job_t *job = offline_job_create("/nonexistent_dir/out.wav",
-                                          &setup, 256, &status);
+  jfofs_offline_job_t *job = jfofs_offline_create("/nonexistent_dir/out.wav",
+                                                  setup.sample_rate,
+                                                  setup.mode,
+                                                  setup.n_preallocate_fofs,
+                                                  setup.fofs_trace_level,
+                                                  256,
+                                                  &status);
 
   TEST_ASSERT_NULL(job);
   TEST_ASSERT_NOT_EQUAL(JFOFS_SUCCESS, status);
@@ -90,24 +108,29 @@ void test_offline_invalid_path(void)
 void test_offline_mono_renders(void)
 {
   const int sample_rate = 44100;
-  const int block_size  = 256;
-  const int n_blocks    = 20;
-  setup_t setup = make_offline_setup(FOF_MONO, sample_rate);
+  const int block_size = 256;
+  const int n_blocks = 20;
+  jfofs_offline_setup_t setup = make_offline_setup(FOF_MONO, sample_rate);
   int status;
   float argv[FOF_NUMARGS];
   default_argv(argv);
 
-  offline_job_t *job = offline_job_create(OFFLINE_TMP_MONO, &setup,
-                                          block_size, &status);
+  jfofs_offline_job_t *job = jfofs_offline_create(OFFLINE_TMP_MONO,
+                                                  setup.sample_rate,
+                                                  setup.mode,
+                                                  setup.n_preallocate_fofs,
+                                                  setup.fofs_trace_level,
+                                                  block_size,
+                                                  &status);
   TEST_ASSERT_NOT_NULL(job);
   TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
 
-  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, offline_job_add(job, 0UL, argv));
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, jfofs_offline_add(job, 0UL, argv));
 
   for (int b = 0; b < n_blocks; b++)
-    TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, offline_job_process(job));
+    TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, jfofs_offline_process(job));
 
-  offline_job_close(job);
+  jfofs_offline_close(job);
 
   /* read back and verify metadata */
   SF_INFO info;
@@ -142,22 +165,27 @@ void test_offline_stereo_renders(void)
   const int sample_rate = 48000;
   const int block_size  = 512;
   const int n_blocks    = 10;
-  setup_t setup = make_offline_setup(FOF_STEREO, sample_rate);
+  jfofs_offline_setup_t setup = make_offline_setup(FOF_STEREO, sample_rate);
   int status;
   float argv[FOF_NUMARGS];
   default_argv(argv);
 
-  offline_job_t *job = offline_job_create(OFFLINE_TMP_STEREO, &setup,
-                                          block_size, &status);
+  jfofs_offline_job_t *job = jfofs_offline_create(OFFLINE_TMP_STEREO,
+                                                  setup.sample_rate,
+                                                  setup.mode,
+                                                  setup.n_preallocate_fofs,
+                                                  setup.fofs_trace_level,
+                                                  block_size,
+                                                  &status);
   TEST_ASSERT_NOT_NULL(job);
   TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
 
-  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, offline_job_add(job, 0UL, argv));
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, jfofs_offline_add(job, 0UL, argv));
 
   for (int b = 0; b < n_blocks; b++)
-    TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, offline_job_process(job));
+    TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, jfofs_offline_process(job));
 
-  offline_job_close(job);
+  jfofs_offline_close(job);
 
   SF_INFO info;
   memset(&info, 0, sizeof(info));
@@ -180,29 +208,34 @@ void test_offline_stereo_renders(void)
 void test_offline_multiple_fofs(void)
 {
   const int sample_rate = 44100;
-  const int block_size  = 256;
-  const int n_blocks    = 40;
-  setup_t setup = make_offline_setup(FOF_MONO, sample_rate);
+  const int block_size = 256;
+  const int n_blocks = 40;
+  jfofs_offline_setup_t setup = make_offline_setup(FOF_MONO, sample_rate);
   int status;
   float argv[FOF_NUMARGS];
   default_argv(argv);
 
-  offline_job_t *job = offline_job_create(OFFLINE_TMP_MULTI, &setup,
-                                          block_size, &status);
+  jfofs_offline_job_t *job = jfofs_offline_create(OFFLINE_TMP_MULTI,
+                                                  setup.sample_rate,
+                                                  setup.mode,
+                                                  setup.n_preallocate_fofs,
+                                                  setup.fofs_trace_level,
+                                                  block_size,
+                                                  &status);
   TEST_ASSERT_NOT_NULL(job);
 
   /* schedule 5 FOFs 50 ms apart */
   for (int k = 0; k < 5; k++)
   {
     uint64_t t = (uint64_t)k * 50000UL;
-    int s = offline_job_add(job, t, argv);
+    int s = jfofs_offline_add(job, t, argv);
     TEST_ASSERT_TRUE(s == JFOFS_SUCCESS || s == JFOFS_FOF_LATE_WARNING);
   }
 
   for (int b = 0; b < n_blocks; b++)
-    TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, offline_job_process(job));
+    TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, jfofs_offline_process(job));
 
-  offline_job_close(job);
+  jfofs_offline_close(job);
 
   SF_INFO info;
   memset(&info, 0, sizeof(info));
@@ -212,4 +245,3 @@ void test_offline_multiple_fofs(void)
   sf_close(sf);
   unlink(OFFLINE_TMP_MULTI);
 }
-

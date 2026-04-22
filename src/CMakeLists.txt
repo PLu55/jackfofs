@@ -1,6 +1,6 @@
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.24)
-  project(Jack_Fofs VERSION 4.1.1 LANGUAGES C)
+  project(Jack_Fofs VERSION 4.2.0 LANGUAGES C)
 endif()
 
 # For single-config generators (e.g. Unix Makefiles), default to a reasonable
@@ -168,6 +168,7 @@ target_link_libraries(jfofs_offline_test
   ${SNDFILE_LIBRARIES}
   ${FOFS_LIB}
   libm.so)
+
 # add_executable(shmem)
 # target_sources(shmem PRIVATE
 # main_shmem.c
@@ -184,10 +185,18 @@ target_sources(jfofs_stress PRIVATE
   test_util.c)
 target_link_libraries(jfofs_stress jfofs_api)
 
-add_library(jfofs_offline STATIC)
+# Standalone offline library — no JACK dependency.
+add_library(jfofs_offline SHARED)
 target_sources(jfofs_offline PRIVATE offline.c offline.h)
 target_include_directories(jfofs_offline SYSTEM PRIVATE ${SNDFILE_INCLUDE_DIRS} ${FOFSHOME}/src)
 target_link_libraries(jfofs_offline ${SNDFILE_LIBRARIES} ${FOFS_LIB})
+
+install(TARGETS jfofs_offline
+  LIBRARY DESTINATION lib)
+
+install(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/jfofs_offline.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Testing
 include(CTest)
