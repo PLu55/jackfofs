@@ -7,6 +7,7 @@ typedef struct setup_s setup_t;
 
 struct setup_s
 {
+  int clock_source;          /* timing source, see jfofs_clock_source_t */
   int mode;                  /* type of fof, defines the number of channels */
   int fofs_trace_level;      /* sets the trace level of the fofs lib */
   int n_clients;             /* number of parallel dsp clients */  

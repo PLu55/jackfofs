@@ -14,6 +14,8 @@ void jfofs_free(jfofs_t *jfofs);
 int jfofs_add(jfofs_t *jfofs, uint64_t time_us, float ampl, float freq,
               float gliss, float phi, float beta, float alpha, float amin,
               float cutoff, float pan1, float pan2, float pan3);
+jfofs_clock_source_t jfofs_get_clock_source(jfofs_t *jfofs);
+int jfofs_set_clock_source(jfofs_t *jfofs, jfofs_clock_source_t clock_source);
 jfofs_time_t jfofs_get_time(jfofs_t *jfofs);
 int jfofs_sample_rate(jfofs_t *jfofs);
 int jfofs_buffer_size(jfofs_t *jfofs);

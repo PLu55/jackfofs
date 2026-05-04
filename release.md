@@ -1,5 +1,15 @@
 # Release changelog
 
+## 4.3.0 - 2026-05-04
+
+* Added selectable online clock sources: JACK frame time and JACK transport
+  frame time.
+* Added runtime API functions `jfofs_set_clock_source()` and
+  `jfofs_get_clock_source()`.
+* Transport clock mode now flushes queued events when transport position jumps
+  or the clock source changes, avoiding stale scheduling after transport
+  discontinuities.
+
 ## 4.2.0 - 2026-04-21
 
 * Added offline processing capabilities to the library.

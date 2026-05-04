@@ -30,6 +30,7 @@ void test_ctrl_client(void)
   printf("fofs version: %s\n", fof_version());
 #endif
 
+  setup.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
   setup.fofs_trace_level = 0;
   setup.mode = FOF_MONO;
   setup.n_clients = 1;

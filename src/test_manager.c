@@ -22,6 +22,7 @@ void test_manager(void)
   // jack_nframes_t sample_rate;
   setup_t setup;
   int n_fofs = 100;
+  setup.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
   setup.mode = FOF_MONO;
   // setup.mode = FOF_STEREO;
   // setup.mode = FOF_AMB1D;

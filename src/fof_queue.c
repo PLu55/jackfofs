@@ -32,6 +32,7 @@ void fof_queue_init(fof_queue_t *q, setup_t *setup)
   q->next_frame = 0;
   q->next_frame_check = 0;
   q->current_slot = 0;
+  q->clock_source = jfofs_clock_source_normalize(setup->clock_source);
   q->n_slots = setup->n_slots;
 
 #ifdef DEBUG_ENABLE
@@ -140,6 +141,38 @@ void fof_queue_free_fofs(fof_queue_t *q, fof_t *head, fof_t *tail)
   CHECK_FOF_ADDR(tail);
 }
 
+static void fof_queue_release_list(fof_queue_t *q, fof_t *head)
+{
+  fof_t *tail;
+
+  if (head == NULL)
+    return;
+
+  tail = head;
+  while (tail->next)
+    tail = tail->next;
+
+  fof_queue_free_fofs(q, head, tail);
+}
+
+void fof_queue_flush(fof_queue_t *q)
+{
+  fof_t *head;
+
+  for (int i = 0; i < q->n_slots; i++)
+  {
+    head = __atomic_exchange_n(&(q->slot[i]), NULL, __ATOMIC_ACQ_REL);
+    fof_queue_release_list(q, head);
+  }
+
+  head = __atomic_exchange_n(&(q->excess), NULL, __ATOMIC_ACQ_REL);
+  fof_queue_release_list(q, head);
+  q->first_fof = NULL;
+  q->last_fof = NULL;
+  q->current_slot = 0;
+  q->next_frame_check = 0;
+}
+
 static inline void set_fof(fof_t *fof, uint64_t time_us, const float *argv)
 {
   fof->time_us = time_us;
@@ -150,6 +183,7 @@ int fof_queue_add(fof_queue_t *q, uint64_t time_us, const float *argv)
 {
   fof_t *fof;
   int status;
+  uint64_t frame_delta;
   uint64_t start_frame;
   uint64_t next_frame;
   uint64_t next_frame_check;
@@ -168,18 +202,19 @@ int fof_queue_add(fof_queue_t *q, uint64_t time_us, const float *argv)
   next_frame = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
 
 recalculate:
-  slot_idx = (start_frame - next_frame) / q->buffer_size;
-
-#ifdef TRACE
-  printf("slot_idx: %d\n", slot_idx);
-#endif
-
-  if (slot_idx < 0)
+  if (start_frame < next_frame)
   {
     INCR_LATE_CNT();
     fof_queue_free_fof(q, fof);
     return JFOFS_FOF_LATE_WARNING;
   }
+
+  frame_delta = start_frame - next_frame;
+  slot_idx = (int)(frame_delta / (uint64_t)q->buffer_size);
+
+#ifdef TRACE
+  printf("slot_idx: %d\n", slot_idx);
+#endif
 
   /* TODO: implement excess handling. */
   /* Case excess */

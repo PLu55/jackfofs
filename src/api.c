@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <stdbool.h>
 
+#include <jack/transport.h>
+
 #include "config.h"
 #include "jfofs.h"
 #include "jfofs_types.h"
@@ -99,17 +101,58 @@ int jfofs_add(jfofs_t *jfofs, uint64_t time_us, float ampl, float freq,
 
 static inline uint64_t current_frame(jfofs_t *jfofs)
 {
-  uint64_t m;
-  uint64_t n;
+  fof_queue_t *q = &(jfofs->shmem->q);
+  uint64_t frame_stamp;
+  uint64_t current_source_frame;
+  uint64_t next_frame;
 
-  n = jfofs->shmem->q.next_frame;
-  m = jack_frame_time(jfofs->j_client) - jfofs->shmem->q.frame_stamp;
-  return (n + m);
+  next_frame = __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE);
+  frame_stamp = __atomic_load_n(&(q->frame_stamp), __ATOMIC_ACQUIRE);
+
+  if (jfofs_clock_uses_transport(jfofs->shmem->setup.clock_source))
+  {
+    jack_position_t pos;
+
+    jack_transport_query(jfofs->j_client, &pos);
+    current_source_frame = pos.frame;
+  }
+  else
+  {
+    current_source_frame = jack_frame_time(jfofs->j_client);
+  }
+
+  if (current_source_frame <= frame_stamp)
+    return next_frame;
+
+  return next_frame + (current_source_frame - frame_stamp);
 }
 
 uint64_t jfofs_get_frame(jfofs_t *jfofs)
 {
   return current_frame(jfofs);
+}
+
+int jfofs_set_clock_source(jfofs_t *jfofs, jfofs_clock_source_t clock_source)
+{
+  int normalized_clock_source;
+
+  if (clock_source == JFOFS_CLOCK_OFFLINE_FREE_RUNNING)
+    return JFOFS_FALIURE;
+
+  normalized_clock_source = jfofs_clock_source_normalize(clock_source);
+  __atomic_store_n(&(jfofs->shmem->q.clock_source), normalized_clock_source,
+                   __ATOMIC_RELEASE);
+  jfofs->shmem->setup.clock_source = normalized_clock_source;
+  return JFOFS_SUCCESS;
+}
+
+jfofs_clock_source_t jfofs_get_clock_source(jfofs_t *jfofs)
+{
+  int clock_source;
+
+  clock_source = __atomic_load_n(&(jfofs->shmem->q.clock_source),
+                                 __ATOMIC_ACQUIRE);
+  return jfofs_clock_source_normalize(clock_source);
 }
 
 jfofs_time_t jfofs_get_time(jfofs_t *jfofs)

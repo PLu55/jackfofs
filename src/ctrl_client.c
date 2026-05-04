@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <jack/jack.h>
+#include <jack/transport.h>
 #include <time.h>
 #include <inttypes.h>
 #include <fofs.h>
@@ -17,6 +18,14 @@ int ctrl_client_xrun_cb(void *arg);
 int ctrl_client_buffer_size_cb(jack_nframes_t nframes, void *arg);
 //
 
+static inline int ctrl_current_clock_source(ctrl_client_t *ctrl)
+{
+  int clock_source;
+
+  clock_source = __atomic_load_n(&(ctrl->q->clock_source), __ATOMIC_ACQUIRE);
+  return jfofs_clock_source_normalize(clock_source);
+}
+
 ctrl_client_t *ctrl_client_new(setup_t *setup, fof_queue_t *q, int *status)
 {
   ctrl_client_t *ctrl = NULL;
@@ -33,6 +42,7 @@ ctrl_client_t *ctrl_client_new(setup_t *setup, fof_queue_t *q, int *status)
   }
 
   ctrl->active = 0;
+  ctrl->clock_source = jfofs_clock_source_normalize(setup->clock_source);
   ctrl->q = q;
   ctrl->n_clients = setup->n_clients;
   ctrl->mode = setup->mode;
@@ -42,6 +52,8 @@ ctrl_client_t *ctrl_client_new(setup_t *setup, fof_queue_t *q, int *status)
   ctrl->n = 0;
   ctrl->m = 0;
   ctrl->syncronized = 0;
+  ctrl->transport_frame = 0;
+  ctrl->transport_state = JackTransportStopped;
   ctrl->xruns = 0;
   ctrl->xrun_limit = setup->xrun_limit;
   ctrl->j_client = jack_client_open(client_name, options, &jstatus,
@@ -83,13 +95,45 @@ void ctrl_client_free(ctrl_client_t *ctrl)
   free(ctrl);
 }
 
-static inline jfofs_time_t get_framestamp(ctrl_client_t *ctrl)
+static inline jfofs_time_t get_framestamp(ctrl_client_t *ctrl,
+                                          int clock_source,
+                                          jack_transport_state_t *transport_state)
 {
-  // struct timespec tp;
-  // clock_gettime(CLOCK_MONOTONIC_RAW, &tp);
-  // return tp.tv_sec * 1000000UL + tp.tv_nsec / 1000UL * ctrl->q->sample_rate;
+  if (jfofs_clock_uses_transport(clock_source))
+  {
+    jack_position_t pos;
+    jack_transport_state_t state;
+
+    state = jack_transport_query(ctrl->j_client, &pos);
+    if (transport_state)
+      *transport_state = state;
+    return pos.frame;
+  }
+
+  if (transport_state)
+    *transport_state = JackTransportRolling;
 
   return jack_frame_time(ctrl->j_client);
+}
+
+static inline int ctrl_transport_discontinuity(ctrl_client_t *ctrl,
+                                               jack_nframes_t nframes,
+                                               jack_transport_state_t transport_state,
+                                               uint64_t frame)
+{
+  uint64_t expected_frame;
+
+  if (!jfofs_clock_uses_transport(ctrl->clock_source) || !ctrl->syncronized)
+    return 0;
+
+  expected_frame = ctrl->transport_frame;
+
+  if (transport_state == JackTransportRolling && ctrl->transport_state == JackTransportRolling)
+  {
+    expected_frame += nframes;
+  }
+
+  return frame != expected_frame;
 }
 
 int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
@@ -97,9 +141,12 @@ int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
   ctrl_client_t *ctrl = (ctrl_client_t *)arg;
   fof_queue_t *q = ctrl->q;
   unsigned int slot_idx;
+  int clock_source;
+  int mode_changed;
   fof_t *fof;
   int i = 0;
   dsp_client_t *dsp;
+  jack_transport_state_t transport_state;
   uint64_t n;
   uint64_t m;
 
@@ -113,16 +160,43 @@ int ctrl_client_process_cb(jack_nframes_t nframes, void *arg)
 
   ADD_CTRL_ENTRY_CNT(1);
 
-  /* TODO: fix atomic access, what memorder to use? */
-  n = __atomic_fetch_add(&q->next_frame, nframes, __ATOMIC_RELEASE);
-  m = get_framestamp(ctrl);
+  clock_source = ctrl_current_clock_source(ctrl);
+  mode_changed = clock_source != ctrl->clock_source;
+  m = get_framestamp(ctrl, clock_source, &transport_state);
+
+  if (mode_changed)
+  {
+    ctrl->clock_source = clock_source;
+    fof_queue_flush(q);
+    ctrl->syncronized = 0;
+  }
+
+  if (ctrl_transport_discontinuity(ctrl, nframes, transport_state, m))
+  {
+    fof_queue_flush(q);
+    ctrl->syncronized = 0;
+  }
+
+  if (jfofs_clock_uses_transport(ctrl->clock_source))
+  {
+    n = m;
+    __atomic_store_n(&(q->next_frame), n, __ATOMIC_RELEASE);
+  }
+  else
+  {
+    /* TODO: fix atomic access, what memorder to use? */
+    n = __atomic_fetch_add(&q->next_frame, nframes, __ATOMIC_RELEASE);
+  }
+
   __atomic_store_n(&(q->frame_stamp), m, __ATOMIC_RELEASE);
+  ctrl->transport_frame = m;
+  ctrl->transport_state = transport_state;
 #ifdef TRACE
   printf("ctrl_client n: %" PRIu64 "\n", n);
   for (int i = 0; i < ctrl->n_clients; i++)
     printf("   dsp[%d] n: %" PRIu64 "\n", i, dsp_get_next_frame(ctrl->dsp[i]));
 #endif
-  if (!ctrl->syncronized)
+  if (!ctrl->syncronized || jfofs_clock_uses_transport(ctrl->clock_source))
   {
     for (int i = 0; i < ctrl->n_clients; i++)
       dsp_set_next_frame(ctrl->dsp[i], n);

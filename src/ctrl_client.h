@@ -11,6 +11,9 @@
 struct ctrl_client_s
 {
   int active;
+  int clock_source;
+  uint64_t transport_frame;
+  int transport_state;
   int n_clients;
   FofMode mode;
   jack_client_t* j_client;

@@ -15,6 +15,7 @@ void test_dsp_client(void)
   fof_t fof;
   setup_t setup;
 
+  setup.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
   setup.mode = FOF_MONO;
   setup.fofs_trace_level = 30;
   setup.n_clients = 1;

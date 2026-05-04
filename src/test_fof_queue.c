@@ -22,6 +22,7 @@ void test_fof_queue_add(void)
   fof_t fof_in;
   uint64_t t;
 
+  setup.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
@@ -77,6 +78,7 @@ void test_fof_queue_init(void)
   size_t slots_off;
   size_t fofs_off;
 
+  setup.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;
@@ -171,6 +173,7 @@ void test_fof_queue_free_list(void)
   fof_t *fof_2;
   fof_t *fof_3;
 
+  setup.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;

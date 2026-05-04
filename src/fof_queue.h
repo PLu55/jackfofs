@@ -16,6 +16,7 @@ struct fof_queue_s
   uint64_t next_frame_check;
   uint64_t frame_stamp;
   uint64_t current_slot;
+  int clock_source;
   int n_slots;
   int sample_rate;
   int buffer_size; /* size of audio buffer, determine the size of the slots */
@@ -33,6 +34,7 @@ void fof_queue_init(fof_queue_t *q, setup_t *setup);
 fof_t *fof_queue_allocate_fof(fof_queue_t *q, int *status);
 void fof_queue_free_fof(fof_queue_t *q, fof_t *fof);
 void fof_queue_free_fofs(fof_queue_t *q, fof_t *head, fof_t *tail);
+void fof_queue_flush(fof_queue_t *q);
 fof_t *fof_queue_take_slot(fof_queue_t *q, int slot_idx);
 int fof_queue_add(fof_queue_t *q, uint64_t time_us, const float *argv);
 #ifdef DEBUG_ENABLE

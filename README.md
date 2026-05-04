@@ -1,5 +1,30 @@
 # jack_fofs
 
+## Clock Sources
+
+The online engine supports two clock sources:
+
+- `1`: JACK frame time. This is the default and matches the previous behavior.
+- `2`: JACK transport frame time. This follows the JACK transport position instead of the client frame clock.
+
+Server selection:
+
+```sh
+jfofs --clock_source 1
+jfofs --clock_source 2
+```
+
+Runtime API selection:
+
+```c
+jfofs_set_clock_source(jfofs, JFOFS_CLOCK_JACK_FRAME_TIME);
+jfofs_set_clock_source(jfofs, JFOFS_CLOCK_JACK_TRANSPORT);
+```
+
+The transport-backed clock flushes queued online events when the transport position jumps or when the clock source changes at runtime. This keeps the queue aligned with the new transport timeline after locate, loop, or similar discontinuities.
+
+`JFOFS_CLOCK_OFFLINE_FREE_RUNNING` is reserved for the offline engine and is not accepted by the online `jfofs` API.
+
 ## Build
 
 ### Release (recommended)

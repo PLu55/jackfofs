@@ -29,6 +29,22 @@ struct fof_s
   float argv[FOF_NUMARGS];
 };
 
+static inline jfofs_clock_source_t jfofs_clock_source_normalize(int clock_source)
+{
+  if (clock_source == JFOFS_CLOCK_JACK_TRANSPORT)
+    return JFOFS_CLOCK_JACK_TRANSPORT;
+
+  if (clock_source == JFOFS_CLOCK_OFFLINE_FREE_RUNNING)
+    return JFOFS_CLOCK_OFFLINE_FREE_RUNNING;
+
+  return JFOFS_CLOCK_JACK_FRAME_TIME;
+}
+
+static inline int jfofs_clock_uses_transport(int clock_source)
+{
+  return jfofs_clock_source_normalize(clock_source) == JFOFS_CLOCK_JACK_TRANSPORT;
+}
+
 static inline jack_nframes_t jfofs_time_to_nframes(uint64_t t, int sample_rate)
 {
   return t * sample_rate / 1000000ULL;

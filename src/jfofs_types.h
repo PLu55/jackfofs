@@ -6,6 +6,17 @@
 #define TIME_1 1000000ULL
 
 typedef uint64_t jfofs_time_t;
+
+enum jfofs_clock_source_e
+{
+  JFOFS_CLOCK_UNSPECIFIED = 0,
+  JFOFS_CLOCK_JACK_FRAME_TIME = 1,
+  JFOFS_CLOCK_JACK_TRANSPORT = 2,
+  JFOFS_CLOCK_OFFLINE_FREE_RUNNING = 3
+};
+
+typedef enum jfofs_clock_source_e jfofs_clock_source_t;
+
 enum jfofs_status_e
 {
   JFOFS_SUCCESS = 0x00,

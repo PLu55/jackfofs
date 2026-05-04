@@ -2,6 +2,7 @@
 #include <unity/unity.h>
 #include <fofs.h>
 #include <jack/jack.h>
+#include <jack/transport.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -40,6 +41,146 @@ static void termination_handler(int signum)
   exit(-1);
 }
 
+static int count_pending_fofs(fof_queue_t *q)
+{
+  int count = 0;
+  fof_t *fof;
+
+  for (int i = 0; i < q->n_slots; i++)
+  {
+    fof = q->slot[i];
+    while (fof)
+    {
+      count++;
+      fof = fof->next;
+    }
+  }
+
+  fof = q->excess;
+  while (fof)
+  {
+    count++;
+    fof = fof->next;
+  }
+
+  return count;
+}
+
+static void wait_for_queue_state(fof_queue_t *q, int expect_nonzero)
+{
+  for (int i = 0; i < 200; i++)
+  {
+    int count = count_pending_fofs(q);
+
+    if (expect_nonzero ? (count > 0) : (count == 0))
+      return;
+
+    usleep(1000);
+  }
+}
+
+void test_api_clock_source(void)
+{
+  int status;
+  setup_t setup;
+  fof_t fof;
+  uint64_t future_us;
+  fof_queue_t *q;
+
+  setup.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
+  setup.mode = FOF_MONO;
+  setup.n_clients = 1;
+  setup.n_preallocate_fofs = 1024;
+  setup.n_max_fofs = 1024;
+  setup.n_slots = 64;
+  setup.sample_rate = 48000;
+  setup.max_buffer_size = 256;
+  setup.fofs_trace_level = 0;
+  setup.xrun_limit = 0;
+  setup.verbose = 0;
+
+  mgr = manager_create(&setup, &status);
+  TEST_ASSERT_NOT_NULL(mgr);
+
+  jfofs = jfofs_new(&status, mgr->shmem);
+  TEST_ASSERT_NOT_NULL(jfofs);
+  q = &(mgr->shmem->q);
+
+  for (int i = 0; i < 200; i++)
+  {
+    if (__atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE) > 0)
+      break;
+    usleep(1000);
+  }
+
+  TEST_ASSERT_EQUAL_INT(JFOFS_CLOCK_JACK_FRAME_TIME,
+                        jfofs_get_clock_source(jfofs));
+
+  fof_default(&fof);
+  future_us = (uint64_t)(4 * q->buffer_size) * 1000000ULL / q->sample_rate;
+  status = jfofs_add(jfofs, jfofs_get_time(jfofs) + future_us,
+                     fof.argv[FOF_ARG_ampl],
+                     fof.argv[FOF_ARG_freq],
+                     fof.argv[FOF_ARG_gliss],
+                     fof.argv[FOF_ARG_phi],
+                     fof.argv[FOF_ARG_beta],
+                     fof.argv[FOF_ARG_alpha],
+                     fof.argv[FOF_ARG_amin],
+                     fof.argv[FOF_ARG_cutoff],
+                     fof.argv[FOF_ARG_pan1],
+                     fof.argv[FOF_ARG_pan2],
+                     fof.argv[FOF_ARG_pan3]);
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
+  wait_for_queue_state(q, 1);
+  TEST_ASSERT_TRUE(count_pending_fofs(q) > 0);
+
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS,
+                        jfofs_set_clock_source(jfofs,
+                                               JFOFS_CLOCK_JACK_TRANSPORT));
+  TEST_ASSERT_EQUAL_INT(JFOFS_CLOCK_JACK_TRANSPORT,
+                        jfofs_get_clock_source(jfofs));
+  wait_for_queue_state(q, 0);
+  TEST_ASSERT_EQUAL_INT(0, count_pending_fofs(q));
+
+  status = jfofs_add(jfofs, jfofs_get_time(jfofs) + future_us,
+                     fof.argv[FOF_ARG_ampl],
+                     fof.argv[FOF_ARG_freq],
+                     fof.argv[FOF_ARG_gliss],
+                     fof.argv[FOF_ARG_phi],
+                     fof.argv[FOF_ARG_beta],
+                     fof.argv[FOF_ARG_alpha],
+                     fof.argv[FOF_ARG_amin],
+                     fof.argv[FOF_ARG_cutoff],
+                     fof.argv[FOF_ARG_pan1],
+                     fof.argv[FOF_ARG_pan2],
+                     fof.argv[FOF_ARG_pan3]);
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS, status);
+  wait_for_queue_state(q, 1);
+  TEST_ASSERT_TRUE(count_pending_fofs(q) > 0);
+
+  jack_transport_locate(mgr->ctrl->j_client,
+                        __atomic_load_n(&(q->next_frame), __ATOMIC_ACQUIRE) + (uint64_t)(8 * q->buffer_size));
+  wait_for_queue_state(q, 0);
+  TEST_ASSERT_EQUAL_INT(0, count_pending_fofs(q));
+
+  TEST_ASSERT_NOT_EQUAL(JFOFS_SUCCESS,
+                        jfofs_set_clock_source(jfofs,
+                                               JFOFS_CLOCK_OFFLINE_FREE_RUNNING));
+  TEST_ASSERT_EQUAL_INT(JFOFS_CLOCK_JACK_TRANSPORT,
+                        jfofs_get_clock_source(jfofs));
+
+  TEST_ASSERT_EQUAL_INT(JFOFS_SUCCESS,
+                        jfofs_set_clock_source(jfofs,
+                                               JFOFS_CLOCK_JACK_FRAME_TIME));
+  TEST_ASSERT_EQUAL_INT(JFOFS_CLOCK_JACK_FRAME_TIME,
+                        jfofs_get_clock_source(jfofs));
+
+  jfofs_free(jfofs);
+  jfofs = NULL;
+  manager_free(mgr);
+  mgr = NULL;
+}
+
 void setup_signal_handlers()
 {
   struct sigaction new_action, old_action;
@@ -70,6 +211,7 @@ void test_api(void)
   signal_tester_client_t *stc;
 
   atexit(exit_handler);
+  setup.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
   setup.mode = FOF_MONO;
   setup.n_clients = 1;
   setup.n_preallocate_fofs = 1024;

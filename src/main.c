@@ -15,6 +15,8 @@ static char doc[] =
 
 static struct argp_option options[] = {
     {"verbose", 'v', 0, 0, "Produce verbose output", 0},
+    {"clock_source", 'c', "mode", 0,
+     "Clock source: 1 jack_frame_time, 2 jack_transport frame", 0},
     {"mode", 'm', "mode", 0,
      "Fof mode: 1: mono, 2: stereo 3: quad: 4: ambiO1 5: ambi01D, default is 1", 0},
     {"n_clients", 'n', "n", 0, "number of parallel clients, default is 1", 0},
@@ -28,6 +30,7 @@ static struct argp_option options[] = {
 struct arguments
 {
   int verbose;
+  int clock_source;
   int mode;
   int n_clients;
   int n_fofs;
@@ -46,6 +49,9 @@ parse_opt(int key, char *arg, struct argp_state *state)
   {
   case 'v':
     arguments->verbose = 1;
+    break;
+  case 'c':
+    arguments->clock_source = atoi(arg);
     break;
   case 'm':
     arguments->mode = atoi(arg);
@@ -180,6 +186,7 @@ int main(int argc, char **argv)
     sigaction(SIGTSTP, &new_action, NULL); /* ^Z */
 
   arguments.verbose = 0;
+  arguments.clock_source = JFOFS_CLOCK_JACK_FRAME_TIME;
   arguments.mode = 1;
   arguments.n_clients = 1;
   arguments.n_fofs = 10 * 1024;
@@ -190,6 +197,7 @@ int main(int argc, char **argv)
 
   argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
+  setup.clock_source = arguments.clock_source;
   setup.mode = arguments.mode;
   setup.n_clients = arguments.n_clients;
   setup.n_preallocate_fofs = arguments.n_fofs;

@@ -1,6 +1,6 @@
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.24)
-  project(Jack_Fofs VERSION 4.2.0 LANGUAGES C)
+  project(Jack_Fofs VERSION 4.3.0 LANGUAGES C)
 endif()
 
 # For single-config generators (e.g. Unix Makefiles), default to a reasonable

@@ -13,6 +13,7 @@ void test_ctrl_client(void);
 void test_manager(void);
 void test_mix_client(void);
 void test_api(void);
+void test_api_clock_source(void);
 void test_shmem(void);
 void test_offline_create_close(void);
 void test_offline_invalid_path(void);
@@ -65,6 +66,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_ctrl_client);
     RUN_TEST(test_mix_client);
     RUN_TEST(test_manager);
+    RUN_TEST(test_api_clock_source);
     // RUN_TEST(test_api);
     // RUN_TEST(test_shmem);
     RUN_TEST(test_offline_create_close);
