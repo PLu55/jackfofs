@@ -79,7 +79,7 @@ int jfofs_offline_add(jfofs_offline_job_t *job, uint64_t time_us,
  *
  * @job - the offline job
  *
- * Returns JFOFS_SUCCESS or JFOFS_FALIURE.
+ * Returns JFOFS_SUCCESS or JFOFS_FAILURE.
  */
 int jfofs_offline_process(jfofs_offline_job_t *job);
 

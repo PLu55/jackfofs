@@ -101,7 +101,7 @@ jfofs_offline_job_t *jfofs_offline_create(const char *path,
       free(job->ch_buf[i]);
     fof_freeBank(job->fof_bank);
     free(job);
-    *status = JFOFS_FALIURE;
+    *status = JFOFS_FAILURE;
     return NULL;
   }
 
@@ -138,7 +138,7 @@ int jfofs_offline_process(jfofs_offline_job_t *job)
   {
     fprintf(stderr, "offline_job_process: sf_writef_float wrote %lld of %d frames: %s\n",
             (long long)written, job->block_size, sf_strerror(job->sf));
-    return JFOFS_FALIURE;
+    return JFOFS_FAILURE;
   }
 
   job->frame_count += (uint64_t)job->block_size;

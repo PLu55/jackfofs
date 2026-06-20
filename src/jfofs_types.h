@@ -20,7 +20,7 @@ typedef enum jfofs_clock_source_e jfofs_clock_source_t;
 enum jfofs_status_e
 {
   JFOFS_SUCCESS = 0x00,
-  JFOFS_FALIURE = 0x01,
+  JFOFS_FAILURE = 0x01,
   JFOFS_MEMORY_ERROR = 0x02,      /* can't allocate memory */
   JFOFS_PORT_ERROR = 0x03,        /* can't register jack port */
   JFOFS_SHM_ERROR = 0x04,         /* can't open shared memory */
