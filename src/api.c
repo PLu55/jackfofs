@@ -111,10 +111,14 @@ static inline uint64_t current_frame(jfofs_t *jfofs)
 
   if (jfofs_clock_uses_transport(jfofs->shmem->setup.clock_source))
   {
+#if 0
     jack_position_t pos;
 
     jack_transport_query(jfofs->j_client, &pos);
     current_source_frame = pos.frame;
+#else
+    current_source_frame = jack_get_current_transport_frame(jfofs->j_client);
+#endif
   }
   else
   {
@@ -132,12 +136,17 @@ uint64_t jfofs_get_frame(jfofs_t *jfofs)
   return current_frame(jfofs);
 }
 
+uint64_t jfofs_get_queue_next_frame(jfofs_t *jfofs)
+{
+  return __atomic_load_n(&(jfofs->shmem->q.next_frame), __ATOMIC_ACQUIRE);
+}
+
 int jfofs_set_clock_source(jfofs_t *jfofs, jfofs_clock_source_t clock_source)
 {
   int normalized_clock_source;
 
   if (clock_source == JFOFS_CLOCK_OFFLINE_FREE_RUNNING)
-    return JFOFS_FALIURE;
+    return JFOFS_FAILURE;
 
   normalized_clock_source = jfofs_clock_source_normalize(clock_source);
   __atomic_store_n(&(jfofs->shmem->q.clock_source), normalized_clock_source,

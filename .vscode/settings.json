@@ -12,5 +12,19 @@
         "./jfofs_test": true,
         "gdb": true,
         "valgrind": true
-    }
+    },
+    "cSpell.words": [
+        "ampl",
+        "DCMAKE",
+        "DDEBUG",
+        "fofs",
+        "gliss",
+        "JFOFS",
+        "jstatus",
+        "libfofs",
+        "NEXTI",
+        "relwithdebinfo",
+        "samplerate",
+        "writef"
+    ]
 }

@@ -1,5 +1,15 @@
 # Release changelog
 
+## 4.3.1 - 2026-06-25
+
+* Bugfix: Fixed a potential crash in `jfofs_set_clock_source()` when called with
+  an invalid clock source.
+* Bugfix: Corrected the handling of transport discontinuities in transport clock
+  mode to ensure queued events are flushed properly.
+* Added `jfofs_get_frame()` function to retrieve the current frame.
+* Added `jfofs_get_queue_next_frame()` function to retrieve the next frame in
+  the queue.
+
 ## 4.3.0 - 2026-05-04
 
 * Added selectable online clock sources: JACK frame time and JACK transport
