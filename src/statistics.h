@@ -20,6 +20,7 @@ void statistics_init();
 void incr_slot_cnt(int slot);
 void incr_late_cnt();
 void incr_excess_cnt();
+int max_used_free_list(void);
 void dump_statistics(void);
 
 #define STATISTICS_T(var) statistics_t var

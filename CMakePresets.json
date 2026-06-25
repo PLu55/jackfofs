@@ -15,7 +15,8 @@
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
         "CMAKE_BUILD_TYPE": "Debug",
-        "DEBUG_ENABLE": "ON"
+        "DEBUG_ENABLE": "ON",
+        "STATISTICS_ENABLE": "ON"
       }
     },
     {

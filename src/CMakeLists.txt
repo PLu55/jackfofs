@@ -105,6 +105,7 @@ set(TEST_SRCS
   test_ctrl_client.c
   test_dsp_client.c
   test_mix_client.c
+  test_statistics.c
   api.c
   test_api.c
   test_shmem.c
